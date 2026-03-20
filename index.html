@@ -584,8 +584,7 @@ function getScol(area){return area==='Trong Hàn Quốc'?SCOL_KR:SCOL_VN;}
 
 // ══ STATE ══
 let leads=[];
-let gsUrl=localStorage.getItem('ytk_gs4')||'https://script.google.com/macros/s/AKfycbxXE0kkIBXWcQqI-aVmeYaWpnop1Y22uQ8C_wX75Yp5hxHiMfOpLxs2T34IUPymlJpUEw/exec';
-// Lưu lại nếu chưa có
+let gsUrl=localStorage.getItem('ytk_gs4')||'https://script.google.com/macros/s/AKfycbzT73Iy9H7sI5dke8kmBso4VL6V8pH7RAkgoBWs8uJJqwPPjsFzhzuQb1dDWrznaAVoiw/exec';
 if(!localStorage.getItem('ytk_gs4')) localStorage.setItem('ytk_gs4',gsUrl);
 let editId=null;
 let isSaving=false;
@@ -739,42 +738,27 @@ function setGsStatus(state,label){
   lbl.textContent=label;
 }
 
-// ══ GOOGLE SHEETS API (REALTIME) ══
+// ══ GOOGLE SHEETS API — dùng GET để tránh CORS ══
 async function gsCall(payload){
   if(!gsUrl)return{ok:false,error:'no_url'};
   try{
-    // Dùng form-data thay vì JSON để tránh CORS preflight
-    const form=new FormData();
-    form.append('data',JSON.stringify(payload));
-    await fetch(gsUrl,{method:'POST',mode:'no-cors',body:form});
-    return{ok:true};
+    const action=payload.action;
+    let url=gsUrl+'?action='+action+'&t='+Date.now();
+    if(payload.lead) url+='&data='+encodeURIComponent(JSON.stringify(payload.lead));
+    if(payload.id) url+='&id='+encodeURIComponent(payload.id);
+    const r=await fetch(url,{mode:'cors'});
+    const d=await r.json();
+    return d;
   }catch(e){return{ok:false,error:e.message};}
 }
 
 async function gsFetch(){
   if(!gsUrl)return null;
-  return new Promise((resolve)=>{
-    const cb='gs_cb_'+Date.now();
-    const script=document.createElement('script');
-    const timer=setTimeout(()=>{
-      delete window[cb];
-      if(script.parentNode) script.parentNode.removeChild(script);
-      resolve(null);
-    },8000);
-    window[cb]=function(data){
-      clearTimeout(timer);
-      delete window[cb];
-      if(script.parentNode) script.parentNode.removeChild(script);
-      resolve(data.ok?data.leads:null);
-    };
-    script.src=gsUrl+'?callback='+cb+'&t='+Date.now();
-    script.onerror=()=>{
-      clearTimeout(timer);
-      delete window[cb];
-      resolve(null);
-    };
-    document.body.appendChild(script);
-  });
+  try{
+    const r=await fetch(gsUrl+'?action=get&t='+Date.now(),{mode:'cors'});
+    const d=await r.json();
+    return d.ok?d.leads:null;
+  }catch(e){return null;}
 }
 
 async function syncNow(silent=false){
