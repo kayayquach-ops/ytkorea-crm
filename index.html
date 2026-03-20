@@ -649,6 +649,7 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
   if(gsUrl){
     setGsStatus('loading','Đang tải...');
     await syncNow(true);
+    startAutoRefresh(); // Bắt đầu auto-refresh sau khi load xong
   } else {
     const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
     if(cached.length){leads=cached;renderAll();}
@@ -706,6 +707,7 @@ async function wzConnect(){
         if(d.leads&&d.leads.length){leads=d.leads;saveLocal();}
         else loadDemo();
         renderAll();
+        startAutoRefresh();
         toast('🎉 Đã kết nối Google Sheets thành công!','var(--grn)');
       },1200);
     } else {res.innerHTML='<span style="color:var(--red)">❌ Kết nối thất bại. Kiểm tra lại Apps Script đã deploy chưa.</span>';}
@@ -769,14 +771,34 @@ async function syncNow(silent=false){
   const data=await gsFetch();
   setLoadingBar(false);
   if(data!==null){
-    leads=data;saveLocal();renderAll();
-    setGsStatus('on','Đã kết nối · '+leads.length+' leads');
-    if(!silent) toast('✓ Đã tải '+leads.length+' leads từ Sheets','var(--grn)');
+    // Chỉ re-render nếu data thực sự thay đổi
+    const newStr=JSON.stringify(data);
+    const oldStr=JSON.stringify(leads);
+    if(newStr!==oldStr){
+      leads=data;saveLocal();renderAll();
+      if(!silent) toast('✓ Đã tải '+leads.length+' leads từ Sheets','var(--grn)');
+    }
+    setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
   } else {
     setGsStatus('on','Kết nối (offline)');
     if(!silent) toast('Không tải được — kiểm tra mạng','var(--red)');
   }
 }
+
+// ══ AUTO REFRESH mỗi 30 giây ══
+let autoRefreshTimer=null;
+function startAutoRefresh(){
+  if(autoRefreshTimer) clearInterval(autoRefreshTimer);
+  autoRefreshTimer=setInterval(async()=>{
+    if(gsUrl && document.visibilityState==='visible'){
+      await syncNow(true);
+    }
+  },5000);
+}
+// Khi tab active lại thì sync ngay
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&gsUrl) syncNow(true);
+});
 
 // ══ SAVE LEAD (REALTIME) ══
 async function saveLeadToSheets(lead,isNew){
@@ -1101,7 +1123,7 @@ function saveGsUrl(){
   gsUrl=url;localStorage.setItem('ytk_gs4',url);
   setGsStatus('on','Đã kết nối');
   document.getElementById('gs-status-text').innerHTML='<span style="color:var(--grn)">✓ Đã lưu URL. Đang tải data...</span>';
-  syncNow();
+  syncNow().then(()=>startAutoRefresh());
 }
 function clearLocalData(){
   if(!confirm('Xóa cache local? Data trên Sheets vẫn còn nguyên.'))return;
