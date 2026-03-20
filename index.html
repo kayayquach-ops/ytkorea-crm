@@ -584,7 +584,7 @@ function getScol(area){return area==='Trong Hàn Quốc'?SCOL_KR:SCOL_VN;}
 
 // ══ STATE ══
 let leads=[];
-let gsUrl=localStorage.getItem('ytk_gs4')||'https://script.google.com/macros/s/AKfycbw2aMc9zrV1dcBP2zld90NIJ4YIIBLomRYWuqqQ8mDG/exec';
+let gsUrl=localStorage.getItem('ytk_gs4')||'https://script.google.com/macros/s/AKfycbxXE0kkIBXWcQqI-aVmeYaWpnop1Y22uQ8C_wX75Yp5hxHiMfOpLxs2T34IUPymlJpUEw/exec';
 // Lưu lại nếu chưa có
 if(!localStorage.getItem('ytk_gs4')) localStorage.setItem('ytk_gs4',gsUrl);
 let editId=null;
@@ -595,7 +595,8 @@ const APPS_SCRIPT=`function doPost(e){
   try{
     var ss=SpreadsheetApp.getActiveSpreadsheet();
     var sh=ss.getSheetByName('Leads');
-    var d=JSON.parse(e.postData.contents);
+    var raw=e.postData.contents||e.parameter.data||'{}';
+    var d=JSON.parse(raw);
     var res={ok:false};
     if(d.action==='add'){
       sh.appendRow([d.lead.id,d.lead.name,d.lead.birth||'',d.lead.phone||'',d.lead.city||'',d.lead.source,d.lead.dien||'',d.lead.status||'',d.lead.area||'',d.lead.potential||1,d.lead.stage||0,d.lead.assignee||'',d.lead.note||'',d.lead.createdAt,d.lead.updatedAt||'']);
@@ -613,15 +614,12 @@ const APPS_SCRIPT=`function doPost(e){
       for(var i=1;i<rows.length;i++){
         if(rows[i][0]===d.id){sh.deleteRow(i+1);res={ok:true,action:'delete'};break;}
       }
-    } else if(d.action==='syncAll'){
-      sh.clearContents();
-      sh.appendRow(['ID','Họ tên','Năm sinh','Liên lạc','Tỉnh/TP','Nguồn','Diện','Tình trạng HĐ','Khu vực','Tiềm năng','Giai đoạn','NV tư vấn','Ghi chú','Ngày thêm','Ngày cập nhật']);
-      d.leads.forEach(function(l){sh.appendRow([l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'']);});
-      res={ok:true,action:'syncAll',count:d.leads.length};
     }
-    return ContentService.createTextOutput(JSON.stringify(res)).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify(res))
+      .setMimeType(ContentService.MimeType.JSON);
   }catch(err){
-    return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.toString()})).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }
 function doGet(e){
@@ -633,9 +631,11 @@ function doGet(e){
       if(!rows[i][0])continue;
       leads.push({id:String(rows[i][0]),name:rows[i][1],birth:String(rows[i][2]||''),phone:String(rows[i][3]||''),city:String(rows[i][4]||''),source:rows[i][5],dien:String(rows[i][6]||''),status:String(rows[i][7]||''),area:String(rows[i][8]||''),potential:parseInt(rows[i][9])||1,stage:parseInt(rows[i][10])||0,assignee:String(rows[i][11]||''),note:String(rows[i][12]||''),createdAt:String(rows[i][13]||''),updatedAt:String(rows[i][14]||'')});
     }
-    return ContentService.createTextOutput(JSON.stringify({ok:true,leads:leads})).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ok:true,leads:leads}))
+      .setMimeType(ContentService.MimeType.JSON);
   }catch(err){
-    return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.toString()})).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 }`;
 
@@ -743,18 +743,38 @@ function setGsStatus(state,label){
 async function gsCall(payload){
   if(!gsUrl)return{ok:false,error:'no_url'};
   try{
-    const r=await fetch(gsUrl,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)});
+    // Dùng form-data thay vì JSON để tránh CORS preflight
+    const form=new FormData();
+    form.append('data',JSON.stringify(payload));
+    await fetch(gsUrl,{method:'POST',mode:'no-cors',body:form});
     return{ok:true};
   }catch(e){return{ok:false,error:e.message};}
 }
 
 async function gsFetch(){
   if(!gsUrl)return null;
-  try{
-    const r=await fetch(gsUrl+'?action=get&t='+Date.now());
-    const d=await r.json();
-    return d.ok?d.leads:null;
-  }catch(e){return null;}
+  return new Promise((resolve)=>{
+    const cb='gs_cb_'+Date.now();
+    const script=document.createElement('script');
+    const timer=setTimeout(()=>{
+      delete window[cb];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      resolve(null);
+    },8000);
+    window[cb]=function(data){
+      clearTimeout(timer);
+      delete window[cb];
+      if(script.parentNode) script.parentNode.removeChild(script);
+      resolve(data.ok?data.leads:null);
+    };
+    script.src=gsUrl+'?callback='+cb+'&t='+Date.now();
+    script.onerror=()=>{
+      clearTimeout(timer);
+      delete window[cb];
+      resolve(null);
+    };
+    document.body.appendChild(script);
+  });
 }
 
 async function syncNow(silent=false){
