@@ -1005,19 +1005,36 @@ async function gsFetch(){
   }catch(e){return null;}
 }
 
+// ══ LOCK & QUEUE ══
+let isSyncing=false;
+let lastWriteTime=0;
+const pendingIds=new Set(); // IDs đang được ghi lên Sheets — KHÔNG fetch đè
+
 async function syncNow(silent=false){
-  if(!gsUrl){toast('Chưa kết nối Google Sheets — vào Cài đặt để setup','#e65100');return;}
+  if(!gsUrl){if(!silent)toast('Chưa kết nối Google Sheets — vào Cài đặt','#e65100');return;}
+  // Nếu đang có lead pending (vừa lưu chưa confirm) → bỏ qua fetch
+  if(pendingIds.size>0){
+    if(!silent) toast('Đang lưu lead... chờ xíu','#e65100');
+    return;
+  }
+  // Nếu vừa ghi trong 8 giây → bỏ qua
+  if(Date.now()-lastWriteTime < 8000) return;
+  if(isSyncing) return;
+  isSyncing=true;
   setLoadingBar(true);
   if(!silent) setGsStatus('loading','Đang tải...');
   const data=await gsFetch();
   setLoadingBar(false);
+  isSyncing=false;
   if(data!==null){
-    // Chỉ re-render nếu data thực sự thay đổi
-    const newStr=JSON.stringify(data);
-    const oldStr=JSON.stringify(leads);
-    if(newStr!==oldStr){
-      leads=data;saveLocal();renderAll();
-      if(!silent) toast('✓ Đã tải '+leads.length+' leads từ Sheets','#2e7d32');
+    // Merge: giữ lại leads đang pending, thêm leads từ Sheets
+    if(pendingIds.size===0){
+      const newStr=JSON.stringify(data);
+      const oldStr=JSON.stringify(leads);
+      if(newStr!==oldStr){
+        leads=data;saveLocal();renderAll();
+        if(!silent) toast('✓ Đã tải '+leads.length+' leads','#2e7d32');
+      }
     }
     setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
   } else {
@@ -1026,36 +1043,55 @@ async function syncNow(silent=false){
   }
 }
 
-// ══ AUTO REFRESH mỗi 30 giây ══
+// ══ AUTO REFRESH mỗi 10 giây ══
 let autoRefreshTimer=null;
 function startAutoRefresh(){
   if(autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer=setInterval(async()=>{
-    if(gsUrl && document.visibilityState==='visible'){
+    if(gsUrl && document.visibilityState==='visible' && !isSyncing && pendingIds.size===0){
       await syncNow(true);
     }
-  },5000);
+  },10000);
 }
-// Khi tab active lại thì sync ngay
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&gsUrl) syncNow(true);
+  if(document.visibilityState==='visible'&&gsUrl&&pendingIds.size===0) syncNow(true);
 });
 
 // ══ SAVE LEAD (REALTIME) ══
 async function saveLeadToSheets(lead,isNew){
-  if(!gsUrl)return;
-  setLoadingBar(true);
-  const res=await gsCall({action:isNew?'add':'update',lead});
-  setLoadingBar(false);
-  if(!res.ok&&res.error!=='no_url') toast('⚠ Lưu lên Sheets thất bại — kiểm tra kết nối','#e53935');
+  if(!gsUrl)return true;
+  pendingIds.add(lead.id); // Đánh dấu đang pending
+  try{
+    const res=await gsCall({action:isNew?'add':'update',lead});
+    if(res.ok){
+      lastWriteTime=Date.now();
+      pendingIds.delete(lead.id); // Xác nhận ghi xong
+      return true;
+    } else {
+      pendingIds.delete(lead.id);
+      toast('⚠ Lưu lên Sheets thất bại — thử lại','#e53935');
+      return false;
+    }
+  }catch(e){
+    pendingIds.delete(lead.id);
+    toast('⚠ Lỗi kết nối Sheets','#e53935');
+    return false;
+  }
 }
 async function deleteLeadFromSheets(id){
   if(!gsUrl)return;
+  lastWriteTime=Date.now();
   await gsCall({action:'delete',id});
 }
 async function updateStageInSheets(lead){
   if(!gsUrl)return;
-  await gsCall({action:'update',lead});
+  pendingIds.add(lead.id);
+  try{
+    await gsCall({action:'update',lead});
+    lastWriteTime=Date.now();
+  }finally{
+    pendingIds.delete(lead.id);
+  }
 }
 
 // ══ NAV ══
@@ -1294,9 +1330,6 @@ async function saveLead(){
   const btn=document.getElementById('save-btn');
   btn.disabled=true;btn.textContent='Đang lưu...';
 
-  // Tạm dừng auto-refresh để tránh ghi đè
-  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
-
   const isNew=!editId;
   const d={
     name,birth:gv('f-birth'),phone:gv('f-phone'),city:gv('f-city'),
@@ -1308,20 +1341,18 @@ async function saveLead(){
     const l=leads.find(x=>x.id===editId);
     if(l){Object.assign(l,d);l.updatedAt=new Date().toISOString();}
     saveLocal();closeModal();renderAll();
-    toast('✓ Đã cập nhật','#2e7d32');
-    await saveLeadToSheets(leads.find(x=>x.id===editId),false);
+    const ok=await saveLeadToSheets(leads.find(x=>x.id===editId),false);
+    if(ok) toast('✓ Đã cập nhật và lưu lên Sheets','#2e7d32');
   } else {
     const lead={id:'ytk_'+Date.now(),...d,createdAt:new Date().toISOString()};
     leads.unshift(lead);
     saveLocal();closeModal();renderAll();
-    toast('✓ Đã thêm lead — đang lưu lên Sheets...','#2e7d32');
-    await saveLeadToSheets(lead,true);
-    toast('✓ Lead đã lưu lên Google Sheets','#2e7d32');
+    toast('⏳ Đang lưu lên Google Sheets...','#1565c0');
+    const ok=await saveLeadToSheets(lead,true);
+    if(ok) toast('✅ Lead đã lưu lên Sheets thành công!','#2e7d32');
+    else toast('⚠ Lưu thất bại — lead vẫn còn ở local, thử lại sau','#e65100');
   }
   btn.disabled=false;btn.textContent='Lưu lead';
-
-  // Khởi động lại auto-refresh sau 3 giây (để Sheets kịp cập nhật)
-  setTimeout(()=>startAutoRefresh(), 3000);
 }
 
 // ══ DETAIL PANEL ══
@@ -1364,22 +1395,18 @@ function closeDetail(){document.getElementById('dov').classList.remove('on');doc
 async function changeStage(id,val){
   const l=leads.find(x=>x.id===id);
   if(l){
-    if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
     l.stage=parseInt(val);l.updatedAt=new Date().toISOString();
     saveLocal();renderAll();
-    toast('Stage: '+getStages(l.area)[parseInt(val)],'var(--grn)');
+    toast('Stage: '+getStages(l.area)[parseInt(val)],'#2e7d32');
     await updateStageInSheets(l);
-    setTimeout(()=>startAutoRefresh(),3000);
   }
 }
 async function delLead(id){
   if(!confirm('Xóa lead này? Thao tác không thể hoàn tác.'))return;
-  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   leads=leads.filter(x=>x.id!==id);
   saveLocal();closeDetail();renderAll();
   toast('Đã xóa lead','#e53935');
   await deleteLeadFromSheets(id);
-  setTimeout(()=>startAutoRefresh(),3000);
 }
 
 // ══ SETTINGS PAGE ══
