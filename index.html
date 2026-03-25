@@ -1035,6 +1035,10 @@ async function saveLead(){
   if(!name){toast('Vui lòng nhập họ tên','var(--red)');return;}
   const btn=document.getElementById('save-btn');
   btn.disabled=true;btn.textContent='Đang lưu...';
+
+  // Tạm dừng auto-refresh để tránh ghi đè
+  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
+
   const isNew=!editId;
   const d={
     name,birth:gv('f-birth'),phone:gv('f-phone'),city:gv('f-city'),
@@ -1052,11 +1056,14 @@ async function saveLead(){
     const lead={id:'ytk_'+Date.now(),...d,createdAt:new Date().toISOString()};
     leads.unshift(lead);
     saveLocal();closeModal();renderAll();
-    toast(gsUrl?'✓ Đã thêm & đang lưu lên Sheets...':'✓ Đã thêm lead mới','var(--grn)');
+    toast('✓ Đã thêm lead — đang lưu lên Sheets...','var(--grn)');
     await saveLeadToSheets(lead,true);
-    if(gsUrl) toast('✓ Lead đã lưu lên Google Sheets','var(--grn)');
+    toast('✓ Lead đã lưu lên Google Sheets','var(--grn)');
   }
   btn.disabled=false;btn.textContent='Lưu lead';
+
+  // Khởi động lại auto-refresh sau 3 giây (để Sheets kịp cập nhật)
+  setTimeout(()=>startAutoRefresh(), 3000);
 }
 
 // ══ DETAIL PANEL ══
@@ -1099,18 +1106,22 @@ function closeDetail(){document.getElementById('dov').classList.remove('on');doc
 async function changeStage(id,val){
   const l=leads.find(x=>x.id===id);
   if(l){
+    if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
     l.stage=parseInt(val);l.updatedAt=new Date().toISOString();
     saveLocal();renderAll();
     toast('Stage: '+getStages(l.area)[parseInt(val)],'var(--grn)');
     await updateStageInSheets(l);
+    setTimeout(()=>startAutoRefresh(),3000);
   }
 }
 async function delLead(id){
   if(!confirm('Xóa lead này? Thao tác không thể hoàn tác.'))return;
+  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   leads=leads.filter(x=>x.id!==id);
   saveLocal();closeDetail();renderAll();
   toast('Đã xóa lead','var(--red)');
   await deleteLeadFromSheets(id);
+  setTimeout(()=>startAutoRefresh(),3000);
 }
 
 // ══ SETTINGS PAGE ══
