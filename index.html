@@ -472,7 +472,76 @@ textarea{resize:vertical;min-height:70px;}
 /* ══ RESPONSIVE ══ */
 @media(max-width:1100px){.sg{grid-template-columns:repeat(3,1fr);}.cr{grid-template-columns:1fr 1fr;}}
 @media(max-width:900px){.sg{grid-template-columns:1fr 1fr;}.cr{grid-template-columns:1fr;}.main{padding:14px 12px;}}
-@media(max-width:600px){.sg{grid-template-columns:1fr 1fr;}.dp{width:100%;right:-100%;}.tn span{display:none;}.tn .ic{font-size:16px;}}
+
+/* ── MOBILE ── */
+@media(max-width:600px){
+  /* Topbar gọn lại */
+  .topbar{padding:0 12px;gap:8px;height:48px;}
+  .tb-divider{display:none;}
+  .tb-nav{display:none;} /* Ẩn top nav — dùng bottom nav thay */
+  .tb-logo-name{font-size:14px;}
+  .tb-logo-emblem{width:30px;height:30px;}
+  .tb-logo-emblem svg{width:18px;height:18px;}
+  /* GS chip — chỉ hiện dot, ẩn label */
+  .gs-chip{padding:5px 8px;}
+  .gs-chip-label{display:none;}
+  /* Ẩn sync btn trên mobile */
+  .sync-btn{display:none;}
+  /* Nút thêm lead nhỏ hơn */
+  .add-btn{padding:6px 12px;font-size:12px;}
+
+  /* Main padding bottom để không bị bottom nav che */
+  .main{padding:12px 12px 76px;}
+
+  /* Stat cards 2 cột */
+  .sg{grid-template-columns:1fr 1fr;gap:10px;}
+  .sc{padding:12px;}
+  .sc-val{font-size:22px;}
+  .sc-icon{width:30px;height:30px;font-size:15px;margin-bottom:8px;}
+
+  /* Charts 1 cột */
+  .cr{grid-template-columns:1fr;}
+
+  /* Detail panel full width */
+  .dp{width:100%;right:-100%;}
+
+  /* Form 1 cột trên mobile */
+  .form-grid{grid-template-columns:1fr;}
+  .ff.s2{grid-column:span 1;}
+}
+
+/* ── BOTTOM NAV (mobile only) ── */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  height:60px;
+  background:var(--surf);
+  border-top:1px solid var(--br);
+  z-index:200;
+  padding:0 8px;
+  padding-bottom:env(safe-area-inset-bottom);
+  box-shadow:0 -2px 12px rgba(0,0,0,0.08);
+}
+@media(max-width:600px){
+  .bottom-nav{display:flex;align-items:center;justify-content:space-around;}
+}
+.bn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 16px;border-radius:10px;cursor:pointer;
+  color:var(--tx3);transition:all .15s;border:none;background:none;
+  font-family:inherit;flex:1;
+}
+.bn.on{color:var(--ac);}
+.bn .bn-ic{font-size:20px;line-height:1;}
+.bn .bn-lb{font-size:10px;font-weight:600;letter-spacing:0.2px;}
+.bn .bn-dot{position:relative;}
+.bn .bn-badge{
+  position:absolute;top:-4px;right:-8px;
+  background:var(--red);color:#fff;
+  font-size:9px;font-weight:700;
+  padding:1px 4px;border-radius:99px;
+  min-width:14px;text-align:center;
+}
 </style>
 </head>
 <body>
@@ -717,6 +786,30 @@ textarea{resize:vertical;min-height:70px;}
   </div>
   <div class="dp-body" id="dp-body"></div>
 </div>
+
+<!-- BOTTOM NAV (mobile only) -->
+<nav class="bottom-nav">
+  <button class="bn on" id="bn-dashboard" onclick="goPage('dashboard',this);syncBottomNav('dashboard')">
+    <span class="bn-ic">📊</span>
+    <span class="bn-lb">Tổng quan</span>
+  </button>
+  <button class="bn" id="bn-leads" onclick="goPage('leads',this);syncBottomNav('leads')">
+    <span class="bn-ic bn-dot">👥<span class="bn-badge" id="bn-cnt" style="display:none"></span></span>
+    <span class="bn-lb">Leads</span>
+  </button>
+  <button class="bn" id="bn-add" onclick="openModal()" style="color:var(--ac);">
+    <span class="bn-ic" style="width:40px;height:40px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;margin-top:-16px;box-shadow:0 4px 12px rgba(15,111,236,0.4);">+</span>
+    <span class="bn-lb" style="color:var(--ac);margin-top:2px;">Thêm</span>
+  </button>
+  <button class="bn" id="bn-pipeline" onclick="goPage('pipeline',this);syncBottomNav('pipeline')">
+    <span class="bn-ic">📋</span>
+    <span class="bn-lb">Pipeline</span>
+  </button>
+  <button class="bn" id="bn-settings" onclick="goPage('settings',this);syncBottomNav('settings')">
+    <span class="bn-ic">⚙️</span>
+    <span class="bn-lb">Cài đặt</span>
+  </button>
+</nav>
 
 <!-- TOAST -->
 <div class="toast" id="toast"><div class="tled" id="tled"></div><span id="tmsg"></span></div>
@@ -970,17 +1063,31 @@ function goPage(name,el){
   document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tn').forEach(n=>n.classList.remove('on'));
   document.getElementById('pg-'+name).classList.add('on');
-  if(el) el.classList.add('on');
+  if(el&&el.classList.contains('tn')) el.classList.add('on');
   if(name==='pipeline') renderKanban();
   if(name==='leads') renderLeads();
+}
+function syncBottomNav(name){
+  document.querySelectorAll('.bn').forEach(b=>b.classList.remove('on'));
+  const btn=document.getElementById('bn-'+name);
+  if(btn) btn.classList.add('on');
+  // sync top nav too
+  document.querySelectorAll('.tn').forEach(n=>{
+    if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+name+"'")) n.classList.add('on');
+    else n.classList.remove('on');
+  });
 }
 
 // ══ RENDER ALL ══
 function renderAll(){
   renderStats();renderWeekChart();renderSrcChart();renderPotChart();
   renderStaffChart();renderPipeMini();renderRecent();renderLeads();renderKanban();
-  document.getElementById('sb-cnt').textContent=leads.length;
-  document.getElementById('leads-count-lbl').textContent=leads.length+' leads tổng cộng';
+  const cnt=leads.length;
+  document.getElementById('sb-cnt').textContent=cnt;
+  document.getElementById('leads-count-lbl').textContent=cnt+' leads tổng cộng';
+  // Update bottom nav badge
+  const bnCnt=document.getElementById('bn-cnt');
+  if(bnCnt){bnCnt.textContent=cnt;bnCnt.style.display=cnt>0?'block':'none';}
 }
 
 // ══ STATS ══
