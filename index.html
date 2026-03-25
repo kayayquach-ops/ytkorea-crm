@@ -909,7 +909,19 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
   gsUrl=GS_URL;
   const inp=document.getElementById('gs-url-input');
   if(inp) inp.value=gsUrl;
-  await forceSync();
+
+  // BƯỚC 1: Hiện cache ngay — trước khi fetch Sheets
+  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+  if(cached.length){
+    leads=cached;
+    renderAll();
+    setGsStatus('on','⏳ Đang cập nhật...');
+  } else {
+    setGsStatus('loading','Đang kết nối...');
+  }
+
+  // BƯỚC 2: Fetch Sheets — chạy ngay, không delay
+  forceSync();
 })();
 
 // ══ WIZARD ══
@@ -1041,22 +1053,17 @@ async function forceSync(){
   isSyncing=false;
   lastWriteTime=0;
 
-  // BƯỚC 1: Hiện cache ngay lập tức — không chờ
-  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
-  if(cached.length){
-    leads=cached;
-    renderAll();
-    setGsStatus('on','⏳ Đang cập nhật... · '+leads.length+' leads');
-  } else {
-    setGsStatus('loading','Đang kết nối...');
-  }
-
-  // BƯỚC 2: Fetch Sheets ngầm — khi xong thì cập nhật
+  // Fetch Sheets
   const data=await gsFetch();
   if(data!==null){
-    leads=data;saveLocal();renderAll();
+    leads=data;
+    saveLocal(); // Lưu cache để lần sau hiện ngay
+    renderAll();
     setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
   } else {
+    // Offline — dùng cache
+    const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+    if(cached.length){leads=cached;renderAll();}
     setGsStatus('on','⚡ Offline · '+leads.length+' leads');
   }
   startAutoRefresh();
