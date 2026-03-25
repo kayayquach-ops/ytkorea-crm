@@ -842,8 +842,10 @@ function getScol(area){return area==='Trong Hàn Quốc'?SCOL_KR:SCOL_VN;}
 
 // ══ STATE ══
 let leads=[];
-let gsUrl=localStorage.getItem('ytk_gs4')||'https://script.google.com/macros/s/AKfycbzT73Iy9H7sI5dke8kmBso4VL6V8pH7RAkgoBWs8uJJqwPPjsFzhzuQb1dDWrznaAVoiw/exec';
-if(!localStorage.getItem('ytk_gs4')) localStorage.setItem('ytk_gs4',gsUrl);
+// URL hardcode — không phụ thuộc localStorage, hoạt động trên mọi thiết bị
+const GS_URL='https://script.google.com/macros/s/AKfycbzT73Iy9H7sI5dke8kmBso4VL6V8pH7RAkgoBWs8uJJqwPPjsFzhzuQb1dDWrznaAVoiw/exec';
+let gsUrl=GS_URL;
+localStorage.setItem('ytk_gs4',gsUrl); // Luôn sync vào localStorage
 let editId=null;
 let isSyncing=false;
 let lastWriteTime=0;
@@ -904,10 +906,15 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
 
 (async function init(){
   localStorage.setItem('ytk_setup_done','1');
-  setGsStatus('loading','Đang tải...');
-  // Force sync ngay khi vào — bỏ qua lock 10s
+  // Luôn dùng URL hardcode — không cần wizard, không cần localStorage
+  gsUrl=GS_URL;
+  // Hiện URL trong ô settings nếu có
+  const inp=document.getElementById('gs-url-input');
+  if(inp) inp.value=gsUrl;
+  // Force sync ngay — bỏ qua mọi lock
   lastWriteTime=0;
   isSyncing=false;
+  setGsStatus('loading','Đang kết nối...');
   await syncNow(true);
   startAutoRefresh();
 })();
@@ -1009,7 +1016,10 @@ async function gsCall(payload){
     let url=gsUrl+'?action='+action+'&t='+Date.now();
     if(payload.lead) url+='&data='+encodeURIComponent(JSON.stringify(payload.lead));
     if(payload.id) url+='&id='+encodeURIComponent(payload.id);
-    const r=await fetch(url,{mode:'cors'});
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),8000);
+    const r=await fetch(url,{mode:'cors',signal:controller.signal});
+    clearTimeout(timer);
     const d=await r.json();
     return d;
   }catch(e){return{ok:false,error:e.message};}
@@ -1018,7 +1028,11 @@ async function gsCall(payload){
 async function gsFetch(){
   if(!gsUrl)return null;
   try{
-    const r=await fetch(gsUrl+'?action=get&t='+Date.now(),{mode:'cors'});
+    // Timeout 6 giây — không chờ lâu
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),6000);
+    const r=await fetch(gsUrl+'?action=get&t='+Date.now(),{mode:'cors',signal:controller.signal});
+    clearTimeout(timer);
     const d=await r.json();
     return d.ok?d.leads:null;
   }catch(e){return null;}
@@ -1029,34 +1043,31 @@ const pendingIds=new Set();
 
 async function syncNow(silent=false){
   if(!gsUrl){if(!silent)toast('Chưa kết nối Google Sheets — vào Cài đặt','#e65100');return;}
-  // Nếu đang có lead pending (vừa lưu chưa confirm) → bỏ qua fetch
-  if(pendingIds.size>0){
-    if(!silent) toast('Đang lưu lead... chờ xíu','#e65100');
-    return;
-  }
-  // Nếu vừa ghi trong 8 giây → bỏ qua
+  if(pendingIds.size>0) return;
   if(Date.now()-lastWriteTime < 8000) return;
   if(isSyncing) return;
+
+  // Hiện data local ngay lập tức khi đang fetch
+  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+  if(cached.length && !leads.length){leads=cached;renderAll();}
+
   isSyncing=true;
-  setLoadingBar(true);
   if(!silent) setGsStatus('loading','Đang tải...');
   const data=await gsFetch();
-  setLoadingBar(false);
   isSyncing=false;
   if(data!==null){
-    // Merge: giữ lại leads đang pending, thêm leads từ Sheets
     if(pendingIds.size===0){
       const newStr=JSON.stringify(data);
       const oldStr=JSON.stringify(leads);
-      if(newStr!==oldStr){
-        leads=data;saveLocal();renderAll();
-        if(!silent) toast('✓ Đã tải '+leads.length+' leads','#2e7d32');
-      }
+      if(newStr!==oldStr){leads=data;saveLocal();renderAll();}
     }
     setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+    if(!silent&&data.length!==leads.length) toast('✓ Đã tải '+data.length+' leads','#2e7d32');
   } else {
-    setGsStatus('on','Kết nối (offline)');
-    if(!silent) toast('Không tải được — kiểm tra mạng','#e53935');
+    // Offline — dùng cache
+    if(cached.length&&!leads.length){leads=cached;renderAll();}
+    setGsStatus('on','⚡ Offline · '+leads.length+' leads');
+    if(!silent) toast('Không kết nối được Sheets — hiện data cũ','#e65100');
   }
 }
 
@@ -1435,7 +1446,8 @@ function saveGsUrl(){
   if(!url||!url.includes('script.google.com')){toast('URL không hợp lệ','#e53935');return;}
   gsUrl=url;localStorage.setItem('ytk_gs4',url);
   setGsStatus('on','Đã kết nối');
-  document.getElementById('gs-status-text').innerHTML='<span style="color:var(--grn)">✓ Đã lưu URL. Đang tải data...</span>';
+  document.getElementById('gs-status-text').innerHTML='<span style="color:var(--grn)">✓ Đã lưu. Đang tải data...</span>';
+  lastWriteTime=0;isSyncing=false;
   syncNow().then(()=>startAutoRefresh());
 }
 function clearLocalData(){
