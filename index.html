@@ -982,29 +982,22 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
   if(inp) inp.value=gsUrl;
 
   const loadingEl=document.getElementById('app-loading');
-  const statusEl=document.getElementById('loading-status');
-
-  // Thử lấy cache trước
-  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
-
-  if(cached.length){
-    // Có cache → hiện ngay, ẩn loading sau 300ms
-    leads=cached;
-    renderAll();
-    if(statusEl) statusEl.textContent='Đang cập nhật...';
-    setTimeout(()=>{
-      if(loadingEl){loadingEl.classList.add('hide');setTimeout(()=>loadingEl.remove(),300);}
-    },300);
-    // Fetch mới ngầm
-    forceSync();
-  } else {
-    // Không có cache → fetch rồi mới ẩn loading
-    if(statusEl) statusEl.textContent='Đang tải dữ liệu...';
-    setGsStatus('loading','Đang kết nối...');
-    await forceSync();
-    // Ẩn loading khi xong
-    if(loadingEl){loadingEl.classList.add('hide');setTimeout(()=>loadingEl.remove(),300);}
+  function hideLoading(){
+    if(loadingEl&&loadingEl.parentNode){
+      loadingEl.classList.add('hide');
+      setTimeout(()=>{if(loadingEl.parentNode)loadingEl.remove();},300);
+    }
   }
+
+  // Hiện cache ngay nếu có
+  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+  if(cached.length){leads=cached;renderAll();}
+
+  // Ẩn loading sau tối đa 2 giây — không chờ fetch
+  setTimeout(hideLoading, 2000);
+
+  // Fetch ngầm — xong thì cập nhật, loading có thể đã ẩn rồi cũng không sao
+  forceSync();
 })();
 
 // ══ WIZARD ══
@@ -1118,7 +1111,7 @@ async function gsFetch(){
   try{
     // Timeout 6 giây — không chờ lâu
     const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),6000);
+    const timer=setTimeout(()=>controller.abort(),4000);
     const r=await fetch(gsUrl+'?action=get&t='+Date.now(),{mode:'cors',signal:controller.signal});
     clearTimeout(timer);
     const d=await r.json();
@@ -1131,25 +1124,25 @@ const pendingIds=new Set();
 
 // ══ FORCE SYNC — không có bất kỳ điều kiện block nào ══
 async function forceSync(){
-  if(!gsUrl) return;
+  if(!gsUrl||isSyncing) return;
+  isSyncing=true;
   pendingIds.clear();
-  isSyncing=false;
   lastWriteTime=0;
+  setGsStatus('loading','Đang tải...');
 
-  // Fetch Sheets
   const data=await gsFetch();
+  isSyncing=false;
+
   if(data!==null){
     leads=data;
-    saveLocal(); // Lưu cache để lần sau hiện ngay
+    saveLocal();
     renderAll();
     setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
   } else {
-    // Offline — dùng cache
-    const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
-    if(cached.length){leads=cached;renderAll();}
+    // Fetch thất bại — giữ nguyên data hiện tại
     setGsStatus('on','⚡ Offline · '+leads.length+' leads');
+    toast('Không kết nối được Sheets','#e65100');
   }
-  startAutoRefresh();
 }
 
 async function syncNow(silent=false){
@@ -1182,17 +1175,14 @@ async function syncNow(silent=false){
   }
 }
 
-// ══ AUTO REFRESH mỗi 10 giây ══
+// ══ AUTO REFRESH — tắt polling, chỉ fetch khi mở/quay lại app ══
 function startAutoRefresh(){
-  if(autoRefreshTimer) clearInterval(autoRefreshTimer);
-  autoRefreshTimer=setInterval(async()=>{
-    if(gsUrl && document.visibilityState==='visible' && !isSyncing && pendingIds.size===0){
-      await syncNow(true);
-    }
-  },10000);
+  // Không dùng setInterval nữa
+  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
 }
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&gsUrl) forceSync();
+  // Khi quay lại tab/app → fetch ngay
+  if(document.visibilityState==='visible'&&gsUrl&&pendingIds.size===0) forceSync();
 });
 
 // ══ SAVE LEAD (REALTIME) ══
