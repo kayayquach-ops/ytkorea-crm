@@ -982,6 +982,7 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
   if(inp) inp.value=gsUrl;
 
   const loadingEl=document.getElementById('app-loading');
+  const statusEl=document.getElementById('loading-status');
   function hideLoading(){
     if(loadingEl&&loadingEl.parentNode){
       loadingEl.classList.add('hide');
@@ -989,15 +990,18 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
     }
   }
 
-  // Hiện cache ngay nếu có
+  // Hiện cache cũ ngay nếu có
   const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
-  if(cached.length){leads=cached;renderAll();}
+  if(cached.length){
+    leads=cached;renderAll();
+    if(statusEl) statusEl.textContent='Đang cập nhật...';
+  } else {
+    if(statusEl) statusEl.textContent='Đang kết nối Sheets...';
+  }
 
-  // Ẩn loading sau tối đa 2 giây — không chờ fetch
-  setTimeout(hideLoading, 2000);
-
-  // Fetch ngầm — xong thì cập nhật, loading có thể đã ẩn rồi cũng không sao
-  forceSync();
+  // Chờ fetch xong (có retry) rồi mới ẩn loading
+  await forceSync();
+  hideLoading();
 })();
 
 // ══ WIZARD ══
@@ -1107,16 +1111,26 @@ async function gsCall(payload){
 }
 
 async function gsFetch(){
-  if(!gsUrl)return null;
-  try{
-    // Timeout 6 giây — không chờ lâu
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),4000);
-    const r=await fetch(gsUrl+'?action=get&t='+Date.now(),{mode:'cors',signal:controller.signal});
-    clearTimeout(timer);
-    const d=await r.json();
-    return d.ok?d.leads:null;
-  }catch(e){return null;}
+  if(!gsUrl) return null;
+
+  async function attempt(){
+    try{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),15000);
+      const r=await fetch(gsUrl+'?action=get&t='+Date.now(),{mode:'cors',signal:controller.signal});
+      clearTimeout(timer);
+      const d=await r.json();
+      return d.ok?d.leads:null;
+    }catch(e){return null;}
+  }
+
+  // Lần 1
+  const r1=await attempt();
+  if(r1!==null) return r1;
+
+  // Fail → chờ 3s → thử lại (Apps Script cold start)
+  await new Promise(r=>setTimeout(r,3000));
+  return await attempt();
 }
 
 // ══ LOCK khi đang lưu lead ══
