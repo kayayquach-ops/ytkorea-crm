@@ -660,7 +660,7 @@ textarea{resize:vertical;min-height:70px;}
       <div class="gs-dot" id="gs-led"></div>
       <span class="gs-chip-label" id="gs-lbl">Chưa kết nối</span>
     </div>
-    <button class="sync-btn" onclick="syncNow()">⟳ Sync</button>
+    <button class="sync-btn" onclick="forceSync()">⟳ Sync</button>
     <button class="theme-btn" onclick="toggleTheme()" id="theme-btn" title="Đổi giao diện">🌙</button>
     <button class="add-btn" onclick="openModal()">+ Thêm lead</button>
   </div>
@@ -741,7 +741,7 @@ textarea{resize:vertical;min-height:70px;}
   <div class="set-card">
     <div class="set-title">📊 Thao tác dữ liệu</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn btn-ghost" onclick="syncNow()">⟳ Tải data mới nhất</button>
+      <button class="btn btn-ghost" onclick="forceSync()">⟳ Tải data mới nhất</button>
       <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
       <button class="btn btn-danger btn-sm" onclick="clearLocalData()">⚠ Xóa cache local</button>
     </div>
@@ -906,17 +906,10 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
 
 (async function init(){
   localStorage.setItem('ytk_setup_done','1');
-  // Luôn dùng URL hardcode — không cần wizard, không cần localStorage
   gsUrl=GS_URL;
-  // Hiện URL trong ô settings nếu có
   const inp=document.getElementById('gs-url-input');
   if(inp) inp.value=gsUrl;
-  // Force sync ngay — bỏ qua mọi lock
-  lastWriteTime=0;
-  isSyncing=false;
-  setGsStatus('loading','Đang kết nối...');
-  await syncNow(true);
-  startAutoRefresh();
+  await forceSync();
 })();
 
 // ══ WIZARD ══
@@ -1041,6 +1034,34 @@ async function gsFetch(){
 // ══ LOCK & QUEUE ══
 const pendingIds=new Set();
 
+// ══ FORCE SYNC — không có bất kỳ điều kiện block nào ══
+async function forceSync(){
+  if(!gsUrl) return;
+  pendingIds.clear();
+  isSyncing=false;
+  lastWriteTime=0;
+
+  // BƯỚC 1: Hiện cache ngay lập tức — không chờ
+  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+  if(cached.length){
+    leads=cached;
+    renderAll();
+    setGsStatus('on','⏳ Đang cập nhật... · '+leads.length+' leads');
+  } else {
+    setGsStatus('loading','Đang kết nối...');
+  }
+
+  // BƯỚC 2: Fetch Sheets ngầm — khi xong thì cập nhật
+  const data=await gsFetch();
+  if(data!==null){
+    leads=data;saveLocal();renderAll();
+    setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
+  } else {
+    setGsStatus('on','⚡ Offline · '+leads.length+' leads');
+  }
+  startAutoRefresh();
+}
+
 async function syncNow(silent=false){
   if(!gsUrl){if(!silent)toast('Chưa kết nối Google Sheets — vào Cài đặt','#e65100');return;}
   if(pendingIds.size>0) return;
@@ -1081,7 +1102,7 @@ function startAutoRefresh(){
   },10000);
 }
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'&&gsUrl&&pendingIds.size===0) syncNow(true);
+  if(document.visibilityState==='visible'&&gsUrl) forceSync();
 });
 
 // ══ SAVE LEAD (REALTIME) ══
