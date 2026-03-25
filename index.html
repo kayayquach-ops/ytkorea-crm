@@ -1119,61 +1119,30 @@ async function gsFetch(){
   }catch(e){return null;}
 }
 
-// ══ LOCK & QUEUE ══
+// ══ LOCK khi đang lưu lead ══
 const pendingIds=new Set();
 
-// ══ FORCE SYNC — không có bất kỳ điều kiện block nào ══
+// ══ FORCE SYNC — fetch Sheets, không block ══
 async function forceSync(){
-  if(!gsUrl||isSyncing) return;
+  if(!gsUrl) return;
   isSyncing=true;
-  pendingIds.clear();
-  lastWriteTime=0;
   setGsStatus('loading','Đang tải...');
-
   const data=await gsFetch();
   isSyncing=false;
-
   if(data!==null){
     leads=data;
     saveLocal();
     renderAll();
     setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
   } else {
-    // Fetch thất bại — giữ nguyên data hiện tại
+    const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+    if(cached.length){leads=cached;renderAll();}
     setGsStatus('on','⚡ Offline · '+leads.length+' leads');
-    toast('Không kết nối được Sheets','#e65100');
   }
 }
 
-async function syncNow(silent=false){
-  if(!gsUrl){if(!silent)toast('Chưa kết nối Google Sheets — vào Cài đặt','#e65100');return;}
-  if(pendingIds.size>0) return;
-  if(Date.now()-lastWriteTime < 8000) return;
-  if(isSyncing) return;
-
-  // Hiện data local ngay lập tức khi đang fetch
-  const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
-  if(cached.length && !leads.length){leads=cached;renderAll();}
-
-  isSyncing=true;
-  if(!silent) setGsStatus('loading','Đang tải...');
-  const data=await gsFetch();
-  isSyncing=false;
-  if(data!==null){
-    if(pendingIds.size===0){
-      const newStr=JSON.stringify(data);
-      const oldStr=JSON.stringify(leads);
-      if(newStr!==oldStr){leads=data;saveLocal();renderAll();}
-    }
-    setGsStatus('on','🟢 Live · '+leads.length+' leads · '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}));
-    if(!silent&&data.length!==leads.length) toast('✓ Đã tải '+data.length+' leads','#2e7d32');
-  } else {
-    // Offline — dùng cache
-    if(cached.length&&!leads.length){leads=cached;renderAll();}
-    setGsStatus('on','⚡ Offline · '+leads.length+' leads');
-    if(!silent) toast('Không kết nối được Sheets — hiện data cũ','#e65100');
-  }
-}
+// syncNow = alias của forceSync (tương thích code cũ)
+async function syncNow(silent){return forceSync();}
 
 // ══ AUTO REFRESH — tắt polling, chỉ fetch khi mở/quay lại app ══
 function startAutoRefresh(){
