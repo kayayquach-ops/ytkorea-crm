@@ -303,13 +303,27 @@ tr:hover td{background:var(--bg3);}
 .filter-select:focus{outline:none;border-color:var(--ac);}
 
 /* ══ KANBAN ══ */
-.kb-wrap{display:flex;flex-direction:column;gap:20px;}
+.kb-wrap{display:flex;flex-direction:column;gap:24px;}
 .kb-section{}
 .kb-section-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-.kb-section-flag{font-size:14px;}
-.kb-section-title{font-size:13px;font-weight:600;color:var(--tx);}
+.kb-section-title{
+  font-size:12px;font-weight:700;color:var(--tx2);
+  letter-spacing:0.5px;text-transform:uppercase;
+  margin-bottom:10px;padding-left:2px;
+}
 .kb-section-count{font-size:12px;color:var(--tx3);background:var(--bg3);padding:1px 7px;border-radius:99px;}
 .kb-cols{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;}
+/* Kanban ngang — mỗi cột không co lại */
+.kb{
+  display:flex;
+  gap:10px;
+  overflow-x:auto;
+  padding-bottom:10px;
+  min-width:0;
+}
+.kb::-webkit-scrollbar{height:4px;}
+.kb::-webkit-scrollbar-track{background:var(--bg3);border-radius:99px;}
+.kb::-webkit-scrollbar-thumb{background:var(--br2);border-radius:99px;}
 .kc{
   min-width:200px;max-width:200px;
   background:var(--bg3);
@@ -831,6 +845,9 @@ let leads=[];
 let gsUrl=localStorage.getItem('ytk_gs4')||'https://script.google.com/macros/s/AKfycbzT73Iy9H7sI5dke8kmBso4VL6V8pH7RAkgoBWs8uJJqwPPjsFzhzuQb1dDWrznaAVoiw/exec';
 if(!localStorage.getItem('ytk_gs4')) localStorage.setItem('ytk_gs4',gsUrl);
 let editId=null;
+let isSyncing=false;
+let lastWriteTime=0;
+let autoRefreshTimer=null;
 let isSaving=false;
 
 // ══ APPS SCRIPT CODE ══
@@ -886,9 +903,11 @@ function doGet(e){
 document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
 (async function init(){
-  // URL đã hardcode — skip wizard, kết nối luôn
   localStorage.setItem('ytk_setup_done','1');
   setGsStatus('loading','Đang tải...');
+  // Force sync ngay khi vào — bỏ qua lock 10s
+  lastWriteTime=0;
+  isSyncing=false;
   await syncNow(true);
   startAutoRefresh();
 })();
@@ -1006,9 +1025,7 @@ async function gsFetch(){
 }
 
 // ══ LOCK & QUEUE ══
-let isSyncing=false;
-let lastWriteTime=0;
-const pendingIds=new Set(); // IDs đang được ghi lên Sheets — KHÔNG fetch đè
+const pendingIds=new Set();
 
 async function syncNow(silent=false){
   if(!gsUrl){if(!silent)toast('Chưa kết nối Google Sheets — vào Cài đặt','#e65100');return;}
@@ -1044,7 +1061,6 @@ async function syncNow(silent=false){
 }
 
 // ══ AUTO REFRESH mỗi 10 giây ══
-let autoRefreshTimer=null;
 function startAutoRefresh(){
   if(autoRefreshTimer) clearInterval(autoRefreshTimer);
   autoRefreshTimer=setInterval(async()=>{
@@ -1251,31 +1267,35 @@ function renderKanban(){
   const vn=leads.filter(l=>l.area!=='Trong Hàn Quốc');
   const kr=leads.filter(l=>l.area==='Trong Hàn Quốc');
   root.innerHTML=`
-    <div class="kb-section">
-      <div class="kb-section-title">🇻🇳 Từ Việt Nam (${vn.length} leads)</div>
-      <div class="kb">${STAGES_VN.map((s,i)=>{
-        const sl=vn.filter(l=>l.stage==i);
-        return `<div class="kc" ondragover="event.preventDefault()" ondrop="dropCard(event,${i},'vn')">
-          <div class="kh"><div class="kd" style="background:${SCOL_VN[i]}"></div><span class="ksn">${s}</span><span class="kcnt">${sl.length}</span></div>
-          <div class="kcards">${sl.map(l=>`<div class="kcard" draggable="true" ondragstart="dragStart(event,'${l.id}')" onclick="openDetail('${l.id}')">
-            <div class="kcard-name">${l.name}</div>
-            <div class="kcard-row">${bSrc(l.source)}${bPot(l.potential)}</div>
-            ${l.assignee?`<div class="kcard-sub">${l.assignee}${l.dien?' · '+l.dien:''}</div>`:''}
-          </div>`).join('')}</div>
-        </div>`;}).join('')}</div>
-    </div>
-    <div class="kb-section">
-      <div class="kb-section-title">🇰🇷 Trong Hàn Quốc (${kr.length} leads)</div>
-      <div class="kb">${STAGES_KR.map((s,i)=>{
-        const sl=kr.filter(l=>l.stage==i);
-        return `<div class="kc" ondragover="event.preventDefault()" ondrop="dropCard(event,${i},'kr')">
-          <div class="kh"><div class="kd" style="background:${SCOL_KR[i]}"></div><span class="ksn">${s}</span><span class="kcnt">${sl.length}</span></div>
-          <div class="kcards">${sl.map(l=>`<div class="kcard" draggable="true" ondragstart="dragStart(event,'${l.id}')" onclick="openDetail('${l.id}')">
-            <div class="kcard-name">${l.name}</div>
-            <div class="kcard-row">${bSrc(l.source)}${bPot(l.potential)}</div>
-            ${l.assignee?`<div class="kcard-sub">${l.assignee}${l.dien?' · '+l.dien:''}</div>`:''}
-          </div>`).join('')}</div>
-        </div>`;}).join('')}</div>
+    <div style="display:flex;flex-direction:column;gap:24px;">
+      <div>
+        <div class="kb-section-title">🇻🇳 Từ Việt Nam · ${vn.length} leads</div>
+        <div class="kb">${STAGES_VN.map((s,i)=>{
+          const sl=vn.filter(l=>l.stage==i);
+          return `<div class="kc" style="flex-shrink:0;" ondragover="event.preventDefault()" ondrop="dropCard(event,${i},'vn')">
+            <div class="kh"><div class="kd" style="background:${SCOL_VN[i]}"></div><span class="ksn">${s}</span><span class="kcnt">${sl.length}</span></div>
+            <div class="kcards">${sl.map(l=>`<div class="kcard" draggable="true" ondragstart="dragStart(event,'${l.id}')" onclick="openDetail('${l.id}')">
+              <div class="kcard-name">${l.name}</div>
+              <div class="kcard-meta">${bSrc(l.source)}${bPot(l.potential)}</div>
+              ${l.assignee?`<div class="kcard-sub">${l.assignee}${l.dien?' · '+l.dien:''}</div>`:''}
+            </div>`).join('')}</div>
+          </div>`;}).join('')}
+        </div>
+      </div>
+      <div>
+        <div class="kb-section-title">🇰🇷 Trong Hàn Quốc · ${kr.length} leads</div>
+        <div class="kb">${STAGES_KR.map((s,i)=>{
+          const sl=kr.filter(l=>l.stage==i);
+          return `<div class="kc" style="flex-shrink:0;" ondragover="event.preventDefault()" ondrop="dropCard(event,${i},'kr')">
+            <div class="kh"><div class="kd" style="background:${SCOL_KR[i]}"></div><span class="ksn">${s}</span><span class="kcnt">${sl.length}</span></div>
+            <div class="kcards">${sl.map(l=>`<div class="kcard" draggable="true" ondragstart="dragStart(event,'${l.id}')" onclick="openDetail('${l.id}')">
+              <div class="kcard-name">${l.name}</div>
+              <div class="kcard-meta">${bSrc(l.source)}${bPot(l.potential)}</div>
+              ${l.assignee?`<div class="kcard-sub">${l.assignee}${l.dien?' · '+l.dien:''}</div>`:''}
+            </div>`).join('')}</div>
+          </div>`;}).join('')}
+        </div>
+      </div>
     </div>`;
 }
 let dragId=null;
