@@ -828,7 +828,7 @@ textarea{resize:vertical;min-height:70px;}
 <!-- SETTINGS -->
 <div class="pg" id="pg-settings">
   <div class="ph"><div><div class="pt">Cài đặt</div><div class="ps">Kết nối Google Sheets & quản lý dữ liệu</div></div></div>
-  <div class="set-card">
+  <div class="set-card" id="gs-connect-card" style="display:none;">
     <div class="set-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.4px;flex-shrink:0;"><path d="M9.5 14.5l5-5"/><path d="M7.3 11l-1.8 1.8a3.7 3.7 0 0 0 5.2 5.2l1.8-1.8"/><path d="M16.7 13l1.8-1.8a3.7 3.7 0 0 0-5.2-5.2l-1.8 1.8"/></svg> Kết nối Google Sheets</div>
     <div class="info-banner"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.2px;flex-shrink:0;"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5"/><circle cx="12" cy="8" r="0.25" fill="currentColor" stroke-width="2.6"/></svg> Sau khi kết nối, mọi thao tác thêm/sửa/xóa lead tự động lưu lên Google Sheets. Nhiều người dùng đồng thời trên các máy khác nhau.</div>
     <div class="url-row" style="margin-bottom:8px;">
@@ -843,7 +843,7 @@ textarea{resize:vertical;min-height:70px;}
     <div id="gs-status-text" style="font-size:12px;color:var(--tx3);"></div>
     <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="showWizard()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.2px;flex-shrink:0;"><rect x="5.5" y="4" width="13" height="17" rx="2"/><rect x="9" y="2.3" width="6" height="3.2" rx="1"/></svg> Xem lại hướng dẫn setup</button>
   </div>
-  <div class="set-card">
+  <div class="set-card" id="data-ops-card" style="display:none;">
     <div class="set-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.4px;flex-shrink:0;"><path d="M4.5 20V11M12 20V4M19.5 20v-7.5"/></svg> Thao tác dữ liệu</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-ghost" onclick="forceSync()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.2px;flex-shrink:0;"><path d="M20.5 12a8.5 8.5 0 1 1-2.8-6.3"/><path d="M20.5 3.5v5.3h-5.3"/></svg> Tải data mới nhất</button>
@@ -1078,6 +1078,11 @@ const STAFF_ROSTER=[
 ];
 const BRANCH_LBL={hq:'VP Hàn Quốc',hn:'VP Hà Nội',dn:'VP Đồng Nai'};
 let currentUser=JSON.parse(localStorage.getItem('ytk_user')||'null');
+
+// ══ QUYỀN ADMIN — chỉ tài khoản trong danh sách này mới thấy phần "Kết nối Google Sheets" / "Thao tác dữ liệu" ══
+// Thêm username vào đây nếu muốn thêm admin khác.
+const ADMIN_USERNAMES=['anhq'];
+function isAdmin(){return !!(currentUser && ADMIN_USERNAMES.includes(currentUser.username));}
 
 // ══ APPS SCRIPT CODE ══
 const APPS_SCRIPT=`function doGet(e){
@@ -1350,7 +1355,14 @@ function checkDupLive(){
 function updateUserChip(){
   const chip=document.getElementById('user-chip');
   if(!chip)return;
-  if(!currentUser){ chip.style.display='none'; return; }
+  if(!currentUser){
+    chip.style.display='none';
+    const gsCard0=document.getElementById('gs-connect-card');
+    const dataCard0=document.getElementById('data-ops-card');
+    if(gsCard0) gsCard0.style.display='none';
+    if(dataCard0) dataCard0.style.display='none';
+    return;
+  }
   chip.style.display='flex';
   const av=document.getElementById('user-chip-av');
   const lbl=document.getElementById('user-chip-lbl');
@@ -1362,6 +1374,12 @@ function updateUserChip(){
   const infoBanner=document.getElementById('account-info-banner');
   if(accCard) accCard.style.display='';
   if(infoBanner) infoBanner.innerHTML=`Đang đăng nhập: <b>${currentUser.fullName||currentUser.matchName}</b> (${currentUser.username}) — ${BRANCH_LBL[currentUser.branch]||''}`;
+  // "Kết nối Google Sheets" + "Thao tác dữ liệu" chỉ admin mới thấy — người khác chỉ thấy "Chia sẻ cho team" + "Tài khoản của tôi"
+  const admin=isAdmin();
+  const gsCard=document.getElementById('gs-connect-card');
+  const dataCard=document.getElementById('data-ops-card');
+  if(gsCard) gsCard.style.display=admin?'':'none';
+  if(dataCard) dataCard.style.display=admin?'':'none';
 }
 
 async function doLogin(){
