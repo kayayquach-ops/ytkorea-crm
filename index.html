@@ -452,6 +452,16 @@ textarea{resize:vertical;min-height:70px;}
 .skip-link{font-size:12px;color:var(--tx3);text-align:center;margin-top:18px;cursor:pointer;}
 .skip-link:hover{color:var(--tx2);}
 
+/* ══ MASK — lead không phải của mình ══ */
+.masked-blur{filter:blur(4.5px);user-select:none;cursor:default;display:inline-block;}
+.masked-blur:hover{filter:blur(2.5px);}
+
+/* ══ USER CHIP ══ */
+.user-chip{display:flex;align-items:center;gap:7px;padding:5px 10px 5px 5px;border-radius:99px;background:var(--bg3);border:1px solid var(--br2);cursor:pointer;}
+.user-chip-av{width:24px;height:24px;border-radius:50%;background:var(--ac-light);color:var(--ac-text);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+.user-chip-lbl{font-size:12px;font-weight:600;color:var(--tx);}
+.user-chip-branch{font-size:10px;color:var(--tx3);font-weight:600;}
+
 /* ══ LOADING BAR ══ */
 .loading-bar{position:fixed;top:0;left:0;right:0;height:2px;background:var(--ac);z-index:500;transform:scaleX(0);transform-origin:left;transition:transform .3s;display:none;}
 .loading-bar.on{display:block;}
@@ -705,6 +715,27 @@ textarea{resize:vertical;min-height:70px;}
   </div>
 </div>
 
+<!-- LOGIN -->
+<div class="wizard" id="login-screen">
+  <div class="wz-inner">
+    <div class="wz-logo-wrap">
+      <div class="wz-logo-emblem" id="login-logo-emblem"></div>
+      <div><div class="wz-logo-name">YTK <span>GLOBAL</span> CRM</div></div>
+    </div>
+    <div class="wz-step on">
+      <div class="wz-title">Đăng nhập</div>
+      <div class="wz-sub">Nhập tài khoản nhân viên tư vấn để vào hệ thống. Mỗi người chỉ thấy đầy đủ lead của mình, lead người khác sẽ hiện mờ.</div>
+      <div class="wz-card">
+        <div class="wz-input-row"><input type="text" id="login-user" placeholder="Tài khoản (VD: anhq)" autocapitalize="off" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/></div>
+        <div class="wz-input-row" style="margin-top:8px;"><input type="password" id="login-pass" placeholder="Mật khẩu" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+        <div style="margin-top:12px;"><button class="btn btn-primary" style="width:100%;" onclick="doLogin()">Đăng nhập</button></div>
+        <div class="wz-result" id="login-result"></div>
+        <p style="font-size:11.5px;color:var(--tx3);margin-top:10px;">Tài khoản = tên + mã chi nhánh (VD <b>anhq</b>, <b>hienhn</b>, <b>tridn</b>). Mật khẩu mặc định <b>1234</b> — đổi được trong Cài đặt sau khi đăng nhập. Quên tài khoản/mật khẩu thì hỏi admin.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOP BAR -->
 <header class="topbar">
   <a class="tb-logo" href="#" onclick="return false;">
@@ -721,6 +752,10 @@ textarea{resize:vertical;min-height:70px;}
     <button class="tn" onclick="goPage('settings',this)"><span class="ic"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.6px;flex-shrink:0;"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></span><span>Cài đặt</span></button>
   </nav>
   <div class="tb-right">
+    <div class="user-chip" id="user-chip" onclick="goPage('settings',null)" title="Bấm để đổi mật khẩu / đăng xuất trong Cài đặt" style="display:none;">
+      <div class="user-chip-av" id="user-chip-av"></div>
+      <div><div class="user-chip-lbl" id="user-chip-lbl"></div><div class="user-chip-branch" id="user-chip-branch"></div></div>
+    </div>
     <div class="gs-chip" onclick="goPage('settings',null)" id="gs-chip">
       <div class="gs-dot" id="gs-led"></div>
       <span class="gs-chip-label" id="gs-lbl">Chưa kết nối</span>
@@ -775,7 +810,7 @@ textarea{resize:vertical;min-height:70px;}
     <select class="filter-select" id="f-stg" onchange="renderLeads()"><option value="">Tất cả stage</option><option value="0">Mới nhận data</option><option value="1">Tư vấn lần 1</option><option value="2">Tư vấn chuyên sâu</option><option value="3">Giai đoạn 4</option><option value="4">Giai đoạn 5</option></select>
     <select class="filter-select" id="f-pot" onchange="renderLeads()"><option value="">Tất cả tiềm năng</option><option value="1">⚪ Thấp</option><option value="2">🟡 Trung bình</option><option value="3">🟢 Tiềm năng</option></select>
     <select class="filter-select" id="f-area" onchange="renderLeads()"><option value="">Tất cả khu vực</option><option>Từ Việt Nam</option><option>Trong Hàn Quốc</option></select>
-    <select class="filter-select" id="f-staff" onchange="renderLeads()"><option value="">Tất cả NV</option><option>Diễm</option><option>An</option><option>Hoàn</option><option>Sếp Tâm</option><option>Khải</option><option>Hiếu</option><option>Ánh</option><option>Lan Anh</option></select>
+    <select class="filter-select" id="f-staff" onchange="renderLeads()"><option value="">Tất cả NV</option></select>
   </div>
   <div class="card">
     <div class="tbl-wrap"><table><thead><tr>
@@ -827,6 +862,19 @@ textarea{resize:vertical;min-height:70px;}
     </div>
     <div class="warn-banner" style="margin-top:10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.2px;flex-shrink:0;"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="5.8" r="2.4"/><circle cx="18" cy="18.2" r="2.4"/><path d="M8.1 10.7l7.8-4.4M8.1 13.3l7.8 4.4"/></svg> Link này chứa mã bảo mật — chỉ gửi riêng qua Zalo/Telegram cho từng người trong team, <b>đừng đăng công khai</b> (Facebook, group public...). Nếu nghi bị lộ, đổi lại <b>SECRET_TOKEN</b> trong Apps Script rồi tạo link mới — link cũ sẽ hết tác dụng.</div>
   </div>
+  <div class="set-card" id="account-card" style="display:none;">
+    <div class="set-title"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.4px;flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4.2 20a7.8 7.8 0 0 1 15.6 0"/></svg> Tài khoản của tôi</div>
+    <div class="info-banner" id="account-info-banner"></div>
+    <div class="url-row" style="margin-bottom:8px;">
+      <input type="password" id="pw-old" placeholder="Mật khẩu hiện tại"/>
+    </div>
+    <div class="url-row" style="margin-bottom:8px;">
+      <input type="password" id="pw-new" placeholder="Mật khẩu mới (tối thiểu 4 ký tự)"/>
+      <button class="btn btn-primary" onclick="doChangePass()">Đổi mật khẩu</button>
+    </div>
+    <div id="pw-result" style="font-size:12px;color:var(--tx3);"></div>
+    <button class="btn btn-danger btn-sm" style="margin-top:10px;" onclick="logout()">Đăng xuất</button>
+  </div>
 </div>
 
 </main>
@@ -842,15 +890,17 @@ textarea{resize:vertical;min-height:70px;}
   <!-- SECTION: Thông tin cá nhân -->
   <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--br);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4.2 20a7.8 7.8 0 0 1 15.6 0"/></svg> Thông tin cá nhân</div>
   <div class="form-grid" style="margin-bottom:14px;">
-    <div class="ff"><label>Họ và tên *</label><input type="text" id="f-name" placeholder="Nguyễn Thị A"></div>
+    <div class="ff"><label>Họ và tên *</label><input type="text" id="f-name" placeholder="Nguyễn Thị A" oninput="checkDupLive()"></div>
     <div class="ff"><label>Năm sinh</label><input type="text" id="f-birth" placeholder="VD: 2006"></div>
-    <div class="ff"><label>SĐT / Zalo</label><input type="text" id="f-phone" placeholder="0912 345 678"></div>
+    <div class="ff"><label>SĐT / Zalo</label><input type="text" id="f-phone" placeholder="0912 345 678" oninput="checkDupLive()"></div>
     <div class="ff"><label>Facebook / TikTok</label><input type="text" id="f-social" placeholder="link hoặc tên tài khoản"></div>
     <div class="ff"><label>Quê quán / Tỉnh TP</label><input type="text" id="f-city" placeholder="VD: Hải Dương"></div>
     <div class="ff"><label>Nguồn kênh</label>
       <select id="f-src2"><option>Facebook</option><option>Instagram</option><option>TikTok</option><option>TikTok Live</option><option>Zalo</option><option>Khác</option></select>
     </div>
   </div>
+
+  <div id="dup-warning" class="warn-banner" style="display:none;"></div>
 
   <!-- SECTION: Học lực -->
   <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--br);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H12v17H6.2A2.2 2.2 0 0 0 4 22.2V5.2z"/><path d="M20 5.2A2.2 2.2 0 0 0 17.8 3H12v17h5.8A2.2 2.2 0 0 1 20 22.2V5.2z"/></svg> Học lực</div>
@@ -900,7 +950,7 @@ textarea{resize:vertical;min-height:70px;}
       <select id="f-pot2"><option value="1">⚪ Thấp</option><option value="2">🟡 Trung bình</option><option value="3" selected>🟢 Tiềm năng</option></select>
     </div>
     <div class="ff"><label>Nhân viên tư vấn</label>
-      <select id="f-staff2"><option value="">-- Chưa phân --</option><option>Diễm</option><option>An</option><option>Hoàn</option><option>Sếp Tâm</option><option>Khải</option><option>Hiếu</option><option>Ánh</option><option>Lan Anh</option></select>
+      <select id="f-staff2"><option value="">-- Chưa phân --</option></select>
     </div>
     <div class="ff s2"><label>Giai đoạn tư vấn</label><select id="f-stg2"></select></div>
     <div class="ff s2"><label>Ghi chú</label><textarea id="f-note" placeholder="Nhu cầu đặc biệt, vấn đề cần lưu ý..."></textarea></div>
@@ -1013,6 +1063,20 @@ let lastWriteTime=0;
 let autoRefreshTimer=null;
 let isSaving=false;
 
+// ══ NHÂN VIÊN / ĐĂNG NHẬP ══
+// Khớp với STAFF_SEED_ trong Code.gs — thêm người mới thì sửa CẢ 2 nơi.
+const STAFF_ROSTER=[
+  {u:'diemhq',n:'Diễm',branch:'hq'},{u:'lananhhq',n:'Lan Anh',branch:'hq'},{u:'anhhq',n:'Ánh',branch:'hq'},
+  {u:'anhq',n:'An',branch:'hq'},{u:'hoanhq',n:'Hoàn',branch:'hq'},{u:'tamhq',n:'Sếp Tâm',branch:'hq'},
+  {u:'hieuhq',n:'Hiếu',branch:'hq'},{u:'khaihq',n:'Khải',branch:'hq'},
+  {u:'hienhn',n:'Hiền',branch:'hn'},{u:'huonghn',n:'Hương',branch:'hn'},{u:'thuhn',n:'Thu',branch:'hn'},
+  {u:'chuyenhn',n:'Chuyền',branch:'hn'},{u:'hoahn',n:'Hòa',branch:'hn'},{u:'huongtrahn',n:'Hương Trà',branch:'hn'},
+  {u:'xuyendn',n:'Xuyên',branch:'dn'},{u:'totrinhdn',n:'Tố Trinh',branch:'dn'},{u:'linhdandn',n:'Linh Đan',branch:'dn'},
+  {u:'tridn',n:'Trí',branch:'dn'},{u:'hieudn',n:'Hiếu',branch:'dn'},{u:'kimnguyendn',n:'Kim Nguyên',branch:'dn'}
+];
+const BRANCH_LBL={hq:'VP Hàn Quốc',hn:'VP Hà Nội',dn:'VP Đồng Nai'};
+let currentUser=JSON.parse(localStorage.getItem('ytk_user')||'null');
+
 // ══ APPS SCRIPT CODE ══
 const APPS_SCRIPT=`function doGet(e){
   try{
@@ -1022,9 +1086,16 @@ const APPS_SCRIPT=`function doGet(e){
     var sh=SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Leads');
     var action=e.parameter.action||'get';
 
+    if(action==='login'){
+      return handleLogin_(e);
+    }
+    if(action==='changepass'){
+      return handleChangePass_(e);
+    }
+
     if(action==='add'){
       var l=JSON.parse(decodeURIComponent(e.parameter.data));
-      sh.appendRow([l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'']);
+      sh.appendRow([l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'',l.branch||'']);
       return out({ok:true,action:'add'});
     }
     if(action==='update'){
@@ -1032,7 +1103,7 @@ const APPS_SCRIPT=`function doGet(e){
       var rows=sh.getDataRange().getValues();
       for(var i=1;i<rows.length;i++){
         if(rows[i][0]===l.id){
-          sh.getRange(i+1,1,1,15).setValues([[l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'']]);
+          sh.getRange(i+1,1,1,16).setValues([[l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'',l.branch||'']]);
           return out({ok:true,action:'update'});
         }
       }
@@ -1049,7 +1120,7 @@ const APPS_SCRIPT=`function doGet(e){
     var leads=[];
     for(var i=1;i<rows.length;i++){
       if(!rows[i][0])continue;
-      leads.push({id:String(rows[i][0]),name:rows[i][1],birth:String(rows[i][2]||''),phone:String(rows[i][3]||''),city:String(rows[i][4]||''),source:rows[i][5],dien:String(rows[i][6]||''),status:String(rows[i][7]||''),area:String(rows[i][8]||''),potential:parseInt(rows[i][9])||1,stage:parseInt(rows[i][10])||0,assignee:String(rows[i][11]||''),note:String(rows[i][12]||''),createdAt:String(rows[i][13]||''),updatedAt:String(rows[i][14]||'')});
+      leads.push({id:String(rows[i][0]),name:rows[i][1],birth:String(rows[i][2]||''),phone:String(rows[i][3]||''),city:String(rows[i][4]||''),source:rows[i][5],dien:String(rows[i][6]||''),status:String(rows[i][7]||''),area:String(rows[i][8]||''),potential:parseInt(rows[i][9])||1,stage:parseInt(rows[i][10])||0,assignee:String(rows[i][11]||''),note:String(rows[i][12]||''),createdAt:String(rows[i][13]||''),updatedAt:String(rows[i][14]||''),branch:String(rows[i][15]||'')});
     }
     return out({ok:true,leads:leads});
   }catch(err){
@@ -1059,11 +1130,85 @@ const APPS_SCRIPT=`function doGet(e){
 function out(data){
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
-// ══ BẢO MẬT: chỉ ai gửi đúng SECRET_TOKEN (đặt ở Project Settings → Script Properties) mới đọc/ghi được ══
+
+// ══ BẢO MẬT — thiết bị: chỉ ai gửi đúng SECRET_TOKEN (đặt ở Project Settings → Script Properties) mới đọc/ghi được ══
 function checkAuth_(token){
   var real=PropertiesService.getScriptProperties().getProperty('SECRET_TOKEN');
   return !!real && token===real;
 }
+
+// ══ ĐĂNG NHẬP THEO TỪNG NHÂN VIÊN — sheet "Users" tự tạo & tự điền lần đầu chạy ══
+// Username = tên gọi + mã chi nhánh (VD hq/hn/dn). Password mặc định: 1234 — đổi trong web sau khi đăng nhập lần đầu.
+// Thêm nhân viên mới thì thêm dòng vào STAFF_SEED_ rồi chạy lại 1 action bất kỳ — người mới tự được thêm vào
+// sheet Users, người cũ (kể cả đã đổi pass) không bị ghi đè.
+var STAFF_SEED_ = [
+  // [username, matchName (khớp cột "NV tư vấn" trong Leads + hiển thị), tên đầy đủ, mã chi nhánh]
+  ['tenchinhanh','Tên','Tên đầy đủ','vp1'],
+  // ...thêm từng nhân viên thật của bạn vào đây (xem sheet Users sau khi chạy lần đầu để đối chiếu)...
+];
+var DEFAULT_PASSWORD_ = '1234';
+
+function hash_(s){
+  var raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8);
+  var hex = '';
+  for (var i=0;i<raw.length;i++){
+    var v = (raw[i]<0? raw[i]+256 : raw[i]).toString(16);
+    hex += v.length===1 ? '0'+v : v;
+  }
+  return hex;
+}
+
+function ensureUsersSheet_(){
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName('Users');
+  if(!sh){
+    sh = ss.insertSheet('Users');
+    sh.appendRow(['username','passwordHash','matchName','fullName','branch']);
+  }
+  var data = sh.getDataRange().getValues();
+  var existing = {};
+  for(var i=1;i<data.length;i++){ existing[String(data[i][0]).toLowerCase()] = true; }
+  STAFF_SEED_.forEach(function(u){
+    if(!existing[u[0].toLowerCase()]){
+      sh.appendRow([u[0], hash_(DEFAULT_PASSWORD_), u[1], u[2], u[3]]);
+    }
+  });
+  return sh;
+}
+
+function handleLogin_(e){
+  var sh = ensureUsersSheet_();
+  var rows = sh.getDataRange().getValues();
+  var uname = String(e.parameter.username||'').toLowerCase().trim();
+  var pass = String(e.parameter.password||'');
+  for(var i=1;i<rows.length;i++){
+    if(String(rows[i][0]).toLowerCase()===uname){
+      if(rows[i][1]===hash_(pass)){
+        return out({ok:true, user:{username:rows[i][0], matchName:rows[i][2], fullName:rows[i][3], branch:rows[i][4]}});
+      }
+      return out({ok:false, error:'wrong_password'});
+    }
+  }
+  return out({ok:false, error:'user_not_found'});
+}
+
+function handleChangePass_(e){
+  var sh = ensureUsersSheet_();
+  var rows = sh.getDataRange().getValues();
+  var uname = String(e.parameter.username||'').toLowerCase().trim();
+  var oldp = String(e.parameter.oldpass||'');
+  var newp = String(e.parameter.newpass||'');
+  if(newp.length<4) return out({ok:false, error:'weak_password'});
+  for(var i=1;i<rows.length;i++){
+    if(String(rows[i][0]).toLowerCase()===uname){
+      if(rows[i][1]!==hash_(oldp)) return out({ok:false, error:'wrong_password'});
+      sh.getRange(i+1,2).setValue(hash_(newp));
+      return out({ok:true});
+    }
+  }
+  return out({ok:false, error:'user_not_found'});
+}
+
 // ===== TELEGRAM NOTIFY khi có lead mới (tuỳ chọn) =====
 const TELEGRAM_TOKEN = 'DÁN_TOKEN_BOT_TELEGRAM_CỦA_BẠN';
 const TELEGRAM_CHAT_ID = 'DÁN_CHAT_ID_GROUP_CỦA_BẠN';
@@ -1081,7 +1226,7 @@ function onNewLead(e) {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Leads');
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return;
-    const row = sheet.getRange(lastRow, 1, 1, 15).getValues()[0];
+    const row = sheet.getRange(lastRow, 1, 1, 16).getValues()[0];
     const msg = '🔔 <b>LEAD MỚI — YTK GLOBAL CRM</b>\\n\\n'
       + '👤 <b>' + (row[1]||'') + '</b>\\n'
       + (row[2] ? '🎂 ' + row[2] + '\\n' : '')
@@ -1090,9 +1235,28 @@ function onNewLead(e) {
       + (row[5] ? '📣 Kênh: ' + row[5] + '\\n' : '')
       + (row[6] ? '🎓 Visa: ' + row[6] + '\\n' : '')
       + (row[7] ? '📝 ' + String(row[7]).slice(0,150) + '\\n' : '')
-      + (row[11] ? '👩‍💼 TV: ' + row[11] + '\\n' : '');
+      + (row[11] ? '👩‍💼 TV: ' + row[11] + (row[15]?(' ('+String(row[15]).toUpperCase()+')'):'') + '\\n' : '');
     sendTelegramNotify(msg);
+    sendSignalNotify(msg.replace(/<\\/?b>/g, '')); // Signal không đọc thẻ HTML nên bỏ <b>
   } catch(err) { Logger.log(err.message); }
+}
+
+// ===== SIGNAL NOTIFY (tuỳ chọn — báo lead mới vào nhóm Signal) =====
+// Để nguyên "DÁN_..." thì hàm này tự bỏ qua, không gây lỗi cho phần Telegram/Sheet.
+const SIGNAL_BOT_URL = 'DÁN_LINK_TAILSCALE_CỦA_BẠN';   // VD: https://ten-may.ten-tailnet.ts.net
+const SIGNAL_NUMBER  = 'DÁN_SỐ_ĐIỆN_THOẠI_BOT';         // VD: +84901234567
+const SIGNAL_GROUP_ID = 'DÁN_GROUP_ID';                  // dạng group.xxxxxxx
+
+function sendSignalNotify(text) {
+  if (!SIGNAL_BOT_URL || SIGNAL_BOT_URL.indexOf('DÁN_') === 0) return;
+  try {
+    UrlFetchApp.fetch(SIGNAL_BOT_URL + '/v2/send', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({ message: text, number: SIGNAL_NUMBER, recipients: [SIGNAL_GROUP_ID] }),
+      muteHttpExceptions: true
+    });
+  } catch (err) { Logger.log('Signal error: ' + err.message); }
 }
 
 function installTrigger() {
@@ -1103,6 +1267,183 @@ function installTrigger() {
   Logger.log('Trigger đã cài!');
 }`;
 
+// ══ HÀM PHỤ TRỢ: ĐĂNG NHẬP / PHÂN QUYỀN XEM ══
+// Value dropdown NV = "Tên|chi_nhánh" (VD "Hiếu|dn") — để phân biệt trùng tên giữa các VP.
+function populateStaffDropdowns(){
+  const groups={};
+  Object.keys(BRANCH_LBL).forEach(br=>groups[br]=[]);
+  STAFF_ROSTER.forEach(s=>{ if(groups[s.branch]) groups[s.branch].push(s); });
+  function buildOptions(placeholderLabel){
+    let html=`<option value="">${placeholderLabel}</option>`;
+    Object.keys(BRANCH_LBL).forEach(br=>{
+      if(!groups[br].length)return;
+      html+=`<optgroup label="${BRANCH_LBL[br]}">`;
+      groups[br].forEach(s=>{ html+=`<option value="${s.n}|${s.branch}">${s.n}</option>`; });
+      html+='</optgroup>';
+    });
+    return html;
+  }
+  const f1=document.getElementById('f-staff');
+  const f2=document.getElementById('f-staff2');
+  if(f1) f1.innerHTML=buildOptions('Tất cả NV');
+  if(f2) f2.innerHTML=buildOptions('-- Chưa phân --');
+}
+
+// Lead thuộc về người đang đăng nhập? (chưa đăng nhập → không phải của ai / lead chưa phân ai → coi như dùng chung)
+// Chi nhánh trống trên lead cũ (chưa backfill) chỉ khớp theo tên, không chặn — tránh che nhầm hàng loạt trước khi backfill xong.
+function isOwnLead(l){
+  if(!currentUser) return false;
+  if(!l.assignee) return true;
+  const nameMatch=String(l.assignee)===String(currentUser.matchName||'');
+  const branchMatch=!l.branch || String(l.branch)===String(currentUser.branch||'');
+  return nameMatch && branchMatch;
+}
+
+// Bôi mờ 1 giá trị nếu lead không phải của mình. Tên khách & NV phụ trách KHÔNG bao giờ gọi qua hàm này (luôn hiện rõ).
+function mask(l,val){
+  if(isOwnLead(l)) return val;
+  return `<span class="masked-blur" title="Riêng tư — của ${l.assignee||'NV khác'}">${val}</span>`;
+}
+
+// Nhãn "Tên · VP" cho cột/thẻ NV phụ trách — luôn hiện rõ, không bôi mờ (để check trùng lead giữa các VP).
+function aLabel(l){
+  if(!l.assignee) return '';
+  return l.assignee+(l.branch?` <span style="opacity:.55;font-size:11px;">· ${BRANCH_LBL[l.branch]||l.branch}</span>`:'');
+}
+
+// ══ BÁO TRÙNG LEAD — so tên (bỏ dấu, hoa/thường) và SĐT giữa các lead, kể cả khác NV/khác VP ══
+function normalizeName(s){
+  return String(s||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/đ/g,'d').replace(/Đ/g,'D')
+    .toLowerCase().trim().replace(/\s+/g,' ');
+}
+function normalizePhone(s){
+  return String(s||'').replace(/\D/g,'');
+}
+function findDuplicateLeads(name,phone,excludeId){
+  const n=normalizeName(name);
+  const p=normalizePhone(phone);
+  if(!n && p.length<8) return [];
+  return leads.filter(l=>l.id!==excludeId).map(l=>{
+    const nameHit=n && normalizeName(l.name)===n;
+    const phoneHit=p.length>=8 && normalizePhone(l.phone)===p;
+    if(!nameHit && !phoneHit) return null;
+    return {lead:l, reason: nameHit&&phoneHit?'name+phone':(phoneHit?'phone':'name')};
+  }).filter(Boolean);
+}
+function checkDupLive(){
+  const box=document.getElementById('dup-warning');
+  if(!box)return;
+  const dups=findDuplicateLeads(gv('f-name'),gv('f-phone'),editId);
+  if(!dups.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.style.display='block';
+  box.innerHTML='⚠️ Có thể trùng với '+dups.length+' lead đã có trong hệ thống:<br>'+dups.map(d=>{
+    const l=d.lead;
+    const why=d.reason==='name+phone'?'trùng tên & SĐT':(d.reason==='phone'?'trùng SĐT':'trùng tên');
+    return '• <b>'+l.name+'</b> — '+aLabel(l)+(l.createdAt?' · thêm '+fDate(l.createdAt):'')+' <span style="opacity:.7;">('+why+')</span>';
+  }).join('<br>');
+}
+
+function updateUserChip(){
+  const chip=document.getElementById('user-chip');
+  if(!chip)return;
+  if(!currentUser){ chip.style.display='none'; return; }
+  chip.style.display='flex';
+  const av=document.getElementById('user-chip-av');
+  const lbl=document.getElementById('user-chip-lbl');
+  const br=document.getElementById('user-chip-branch');
+  if(av) av.textContent=(currentUser.matchName||'?').trim().charAt(0).toUpperCase();
+  if(lbl) lbl.textContent=currentUser.matchName||currentUser.username;
+  if(br) br.textContent=BRANCH_LBL[currentUser.branch]||currentUser.branch||'';
+  const accCard=document.getElementById('account-card');
+  const infoBanner=document.getElementById('account-info-banner');
+  if(accCard) accCard.style.display='';
+  if(infoBanner) infoBanner.innerHTML=`Đang đăng nhập: <b>${currentUser.fullName||currentUser.matchName}</b> (${currentUser.username}) — ${BRANCH_LBL[currentUser.branch]||''}`;
+}
+
+async function doLogin(){
+  const uEl=document.getElementById('login-user');
+  const pEl=document.getElementById('login-pass');
+  const resEl=document.getElementById('login-result');
+  const uname=(uEl?uEl.value:'').trim();
+  const pass=pEl?pEl.value:'';
+  if(!uname||!pass){ if(resEl) resEl.innerHTML='<span style="color:#e53935;">Nhập đủ tài khoản &amp; mật khẩu</span>'; return; }
+  if(!gsUrl||!gsToken){ if(resEl) resEl.innerHTML='<span style="color:#e53935;">Thiết bị chưa kết nối Sheets — liên hệ quản trị viên</span>'; return; }
+  if(resEl) resEl.innerHTML='<span style="color:var(--tx2);">Đang kiểm tra...</span>';
+  try{
+    const url=gsUrl+'?action=login&t='+Date.now()+'&token='+encodeURIComponent(gsToken)+'&username='+encodeURIComponent(uname)+'&password='+encodeURIComponent(pass);
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),10000);
+    const r=await fetch(url,{mode:'cors',signal:controller.signal});
+    clearTimeout(timer);
+    const d=await r.json();
+    if(d.ok&&d.user&&d.user.username){
+      currentUser=d.user;
+      localStorage.setItem('ytk_user',JSON.stringify(currentUser));
+      if(pEl) pEl.value='';
+      if(resEl) resEl.innerHTML='';
+      document.getElementById('login-screen').classList.remove('on');
+      updateUserChip();
+      toast('Xin chào, '+(currentUser.matchName||currentUser.username)+'!','#2e7d32');
+      const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
+      if(cached.length){leads=cached;renderAll();}
+      await forceSync();
+    } else if(d.ok){
+      // Server trả ok:true nhưng thiếu user -> Code.gs trên Apps Script chưa được cập nhật bản mới có đăng nhập.
+      if(resEl) resEl.innerHTML='<span style="color:#e53935;">Hệ thống chưa sẵn sàng đăng nhập (Code.gs chưa cập nhật) — báo quản trị viên</span>';
+    } else {
+      const msg=d.error==='wrong_password'?'Sai mật khẩu':(d.error==='user_not_found'?'Không tìm thấy tài khoản này':'Lỗi: '+(d.error||'không rõ'));
+      if(resEl) resEl.innerHTML='<span style="color:#e53935;">'+msg+'</span>';
+    }
+  }catch(e){
+    if(resEl) resEl.innerHTML='<span style="color:#e53935;">Lỗi kết nối, thử lại</span>';
+  }
+}
+
+function logout(){
+  if(!confirm('Đăng xuất khỏi tài khoản '+(currentUser?currentUser.matchName:'')+'?'))return;
+  currentUser=null;
+  localStorage.removeItem('ytk_user');
+  const uEl=document.getElementById('login-user'); if(uEl) uEl.value='';
+  const pEl=document.getElementById('login-pass'); if(pEl) pEl.value='';
+  const resEl=document.getElementById('login-result'); if(resEl) resEl.innerHTML='';
+  updateUserChip();
+  document.getElementById('login-screen').classList.add('on');
+  renderAll();
+}
+
+async function doChangePass(){
+  if(!currentUser){toast('Chưa đăng nhập','#e53935');return;}
+  const oldEl=document.getElementById('pw-old');
+  const newEl=document.getElementById('pw-new');
+  const resEl=document.getElementById('pw-result');
+  const oldp=oldEl?oldEl.value:'';
+  const newp=newEl?newEl.value:'';
+  if(!oldp||!newp){ if(resEl) resEl.innerHTML='<span style="color:#e53935;">Nhập đủ 2 ô</span>'; return; }
+  if(newp.length<4){ if(resEl) resEl.innerHTML='<span style="color:#e53935;">Mật khẩu mới cần từ 4 ký tự</span>'; return; }
+  if(resEl) resEl.innerHTML='<span style="color:var(--tx2);">Đang đổi...</span>';
+  try{
+    const url=gsUrl+'?action=changepass&t='+Date.now()+'&token='+encodeURIComponent(gsToken)+'&username='+encodeURIComponent(currentUser.username)+'&oldpass='+encodeURIComponent(oldp)+'&newpass='+encodeURIComponent(newp);
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),10000);
+    const r=await fetch(url,{mode:'cors',signal:controller.signal});
+    clearTimeout(timer);
+    const d=await r.json();
+    if(d.ok){
+      if(resEl) resEl.innerHTML='<span style="color:#2e7d32;">✓ Đã đổi mật khẩu</span>';
+      if(oldEl) oldEl.value='';
+      if(newEl) newEl.value='';
+      toast('Đã đổi mật khẩu','#2e7d32');
+    } else {
+      const msg=d.error==='wrong_password'?'Sai mật khẩu hiện tại':(d.error==='weak_password'?'Mật khẩu mới quá ngắn':'Lỗi: '+(d.error||'không rõ'));
+      if(resEl) resEl.innerHTML='<span style="color:#e53935;">'+msg+'</span>';
+    }
+  }catch(e){
+    if(resEl) resEl.innerHTML='<span style="color:#e53935;">Lỗi kết nối, thử lại</span>';
+  }
+}
+
 // ══ BOOT ══
 document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('vi-VN',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 
@@ -1111,6 +1452,11 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
   if(inp) inp.value=gsUrl;
   const tinp=document.getElementById('gs-token-input');
   if(tinp) tinp.value=gsToken;
+
+  populateStaffDropdowns();
+  const wzEmblem=document.querySelector('.wz-logo-emblem');
+  const loginEmblem=document.getElementById('login-logo-emblem');
+  if(wzEmblem&&loginEmblem) loginEmblem.innerHTML=wzEmblem.innerHTML;
 
   const loadingEl=document.getElementById('app-loading');
   const statusEl=document.getElementById('loading-status');
@@ -1128,6 +1474,14 @@ document.getElementById('today-lbl').textContent=new Date().toLocaleDateString('
     showWizard();
     return;
   }
+
+  if(!currentUser){
+    // Đã kết nối Sheets nhưng chưa đăng nhập tài khoản cá nhân — chặn ở màn hình đăng nhập.
+    hideLoading();
+    document.getElementById('login-screen').classList.add('on');
+    return;
+  }
+  updateUserChip();
 
   // Hiện cache cũ ngay nếu có
   const cached=JSON.parse(localStorage.getItem('ytk_leads4')||'[]');
@@ -1470,7 +1824,7 @@ function renderRecent(){
     <td class="td-name" style="padding-left:18px;" onclick="openDetail('${l.id}')">${l.name}</td>
     <td>${bSrc(l.source)}</td><td style="font-size:12px;color:var(--tx2);">${l.dien||'—'}</td>
     <td>${bPot(l.potential)}</td><td>${bStg(l.stage,l.area)}</td>
-    <td style="font-size:12px;color:var(--tx2);">${l.assignee||'—'}</td>
+    <td style="font-size:12px;color:var(--tx2);">${aLabel(l)}</td>
     <td style="font-size:12px;">${fDate(l.createdAt)}</td>
   </tr>`).join('');
 }
@@ -1482,25 +1836,26 @@ function renderLeads(){
   const fSt=document.getElementById('f-stg')?.value;
   const fP=document.getElementById('f-pot')?.value;
   const fA=document.getElementById('f-area')?.value||'';
-  const fSf=document.getElementById('f-staff')?.value||'';
+  const fSfRaw=document.getElementById('f-staff')?.value||'';
+  const fSfParts=fSfRaw.split('|'); // "Tên|chi_nhánh" — tránh lẫn 2 người trùng tên khác VP
   let fl=leads.filter(l=>{
     if(q&&!l.name.toLowerCase().includes(q)&&!(l.phone||'').includes(q))return false;
     if(fS&&l.source!==fS)return false;
     if(fSt!==''&&fSt!=null&&l.stage!=fSt)return false;
     if(fP!==''&&fP!=null&&l.potential!=fP)return false;
     if(fA&&l.area!==fA)return false;
-    if(fSf&&l.assignee!==fSf)return false;
+    if(fSfRaw&&(l.assignee!==fSfParts[0]||(fSfParts[1]&&l.branch&&l.branch!==fSfParts[1])))return false;
     return true;
   });
   const el=document.getElementById('leads-tbl');if(!el)return;
   if(!fl.length){el.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:24px;">Không có kết quả</td></tr>`;return;}
   el.innerHTML=fl.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).map(l=>`<tr>
     <td class="td-name" style="padding-left:18px;" onclick="openDetail('${l.id}')">${l.name}</td>
-    <td style="font-size:12px;">${l.phone||'—'}</td>
+    <td style="font-size:12px;">${l.phone?mask(l,l.phone):'—'}</td>
     <td>${bSrc(l.source)}</td>
     <td style="font-size:12px;color:var(--tx2);">${l.dien||'—'}</td>
     <td>${bPot(l.potential)}</td><td>${bStg(l.stage,l.area)}</td>
-    <td style="font-size:12px;color:var(--tx2);">${l.assignee||'—'}</td>
+    <td style="font-size:12px;color:var(--tx2);">${aLabel(l)}</td>
     <td style="padding-right:14px;"><button class="btn btn-ghost btn-sm" onclick="openModal('${l.id}')">Sửa</button></td>
   </tr>`).join('');
 }
@@ -1521,7 +1876,7 @@ function renderKanban(){
             <div class="kcards">${sl.map(l=>`<div class="kcard" draggable="true" ondragstart="dragStart(event,'${l.id}')" onclick="openDetail('${l.id}')">
               <div class="kcard-name">${l.name}</div>
               <div class="kcard-meta">${bSrc(l.source)}${bPot(l.potential)}</div>
-              ${l.assignee?`<div class="kcard-sub">${l.assignee}${l.dien?' · '+l.dien:''}</div>`:''}
+              ${l.assignee?`<div class="kcard-sub">${aLabel(l)}${l.dien?' · '+l.dien:''}</div>`:''}
             </div>`).join('')}</div>
           </div>`;}).join('')}
         </div>
@@ -1535,7 +1890,7 @@ function renderKanban(){
             <div class="kcards">${sl.map(l=>`<div class="kcard" draggable="true" ondragstart="dragStart(event,'${l.id}')" onclick="openDetail('${l.id}')">
               <div class="kcard-name">${l.name}</div>
               <div class="kcard-meta">${bSrc(l.source)}${bPot(l.potential)}</div>
-              ${l.assignee?`<div class="kcard-sub">${l.assignee}${l.dien?' · '+l.dien:''}</div>`:''}
+              ${l.assignee?`<div class="kcard-sub">${aLabel(l)}${l.dien?' · '+l.dien:''}</div>`:''}
             </div>`).join('')}</div>
           </div>`;}).join('')}
         </div>
@@ -1573,6 +1928,8 @@ function toggleRelative(){
 function openModal(id=null){
   editId=id;
   document.getElementById('modal-ttl').textContent=id?'SỬA LEAD':'THÊM LEAD MỚI';
+  const dupBox=document.getElementById('dup-warning');
+  if(dupBox){dupBox.style.display='none';dupBox.innerHTML='';}
   const F=(i,d='')=>{const el=document.getElementById(i);if(el)el.value=d;};
   if(id){
     const l=leads.find(x=>x.id===id);
@@ -1590,13 +1947,13 @@ function openModal(id=null){
       document.getElementById('f-rel-no').checked=!hasRel;
       document.getElementById('f-relative-wrap').style.display=hasRel?'block':'none';
       F('f-relative',hasRel?l.relative:'');
-      F('f-pot2',l.potential||3);F('f-staff2',l.assignee||'');F('f-note',l.note||'');
+      F('f-pot2',l.potential||3);F('f-staff2',(l.assignee||'')+(l.branch?'|'+l.branch:''));F('f-note',l.note||'');
       updateStageOpts();F('f-stg2',l.stage||0);
     }
   } else {
     ['f-name','f-birth','f-phone','f-social','f-city','f-gpa','f-school','f-finance','f-relative','f-note'].forEach(i=>F(i));
     F('f-src2','Facebook');F('f-korean','');F('f-dien','');F('f-area2','');F('f-intake','');
-    F('f-pot2',3);F('f-staff2','');
+    F('f-pot2',3);F('f-staff2',currentUser?(currentUser.matchName+'|'+currentUser.branch):'');
     document.getElementById('f-rel-no').checked=true;
     document.getElementById('f-rel-yes').checked=false;
     document.getElementById('f-relative-wrap').style.display='none';
@@ -1611,6 +1968,17 @@ const gv=id=>{const el=document.getElementById(id);return el?el.value.trim():'';
 async function saveLead(){
   const name=gv('f-name');
   if(!name){toast('Vui lòng nhập họ tên','#e53935');return;}
+
+  // Báo trùng trước khi lưu — chỉ chặn khi TẠO MỚI (sửa lead có sẵn thì không hỏi lại)
+  if(!editId){
+    const dups=findDuplicateLeads(name,gv('f-phone'),null);
+    if(dups.length){
+      const listTxt=dups.slice(0,5).map(d=>'- '+d.lead.name+' ('+(d.lead.assignee||'chưa phân')+(d.lead.branch?' · '+BRANCH_LBL[d.lead.branch]:'')+')').join('\n');
+      const proceed=confirm('⚠️ Có '+dups.length+' lead trùng tên/SĐT đã có trong hệ thống:\n\n'+listTxt+'\n\nBạn có chắc đây là học sinh KHÁC (không phải người đã có)?\n\nOK = vẫn lưu (đúng là khác người)\nCancel = huỷ, để kiểm tra lại');
+      if(!proceed) return;
+    }
+  }
+
   const btn=document.getElementById('save-btn');
   btn.disabled=true;btn.textContent='Đang lưu...';
 
@@ -1618,6 +1986,10 @@ async function saveLead(){
   const hasRel=document.getElementById('f-rel-yes')&&document.getElementById('f-rel-yes').checked;
   const relativeVal=hasRel?(gv('f-relative')||'Có'): 'Không';
 
+  // f-staff2 lưu dạng "Tên|chi_nhánh" (VD "Hiếu|dn") để phân biệt trùng tên giữa các VP
+  const staffRaw=gv('f-staff2');
+  const staffParts=staffRaw.split('|');
+  const existingLead=editId?leads.find(x=>x.id===editId):null;
   const d={
     name,birth:gv('f-birth'),phone:gv('f-phone'),social:gv('f-social'),
     city:gv('f-city'),source:gv('f-src2'),
@@ -1627,7 +1999,9 @@ async function saveLead(){
     finance:gv('f-finance'),relative:relativeVal,
     potential:parseInt(gv('f-pot2'))||3,
     stage:parseInt(gv('f-stg2'))||0,
-    assignee:gv('f-staff2'),note:gv('f-note'),
+    assignee:staffParts[0]||'',
+    branch:staffParts[1]||(existingLead&&existingLead.branch)||(currentUser&&currentUser.branch)||'',
+    note:gv('f-note'),
   };
 
   if(editId){
@@ -1657,11 +2031,14 @@ function openDetail(id){
   document.getElementById('dov').classList.add('on');
   const p=document.getElementById('dp');p.classList.add('on');
   const stages=getStages(l.area);
+  const own=isOwnLead(l);
   const row=(label,val)=>val?`<div class="dp-row"><span class="dp-label">${label}</span><span class="dp-val">${val}</span></div>`:'';
+  const rowM=(label,val)=>val?`<div class="dp-row"><span class="dp-label">${label}</span><span class="dp-val">${mask(l,val)}</span></div>`:'';
   p.innerHTML=`
     <button class="md-close" style="position:absolute;top:18px;right:18px;" onclick="closeDetail()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     <div class="dp-name">${l.name}</div>
     <div class="dp-meta">${bSrc(l.source)}${bStg(l.stage,l.area)}${bPot(l.potential)}</div>
+    ${own?'':'<div class="info-banner" style="margin-bottom:14px;">🔒 Lead của <b>'+(l.assignee||'người khác')+(l.branch?' · '+BRANCH_LBL[l.branch]:'')+'</b> — vài thông tin riêng tư đang hiện mờ.</div>'}
 
     <div class="dp-section"><div class="dp-section-title">Chuyển giai đoạn nhanh</div>
       <select style="width:100%;padding:8px;border:1px solid var(--br2);border-radius:7px;background:var(--bg3);color:var(--tx);font-family:inherit;" onchange="changeStage('${l.id}',this.value)">
@@ -1670,36 +2047,36 @@ function openDetail(id){
     </div>
 
     <div class="dp-section"><div class="dp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4.2 20a7.8 7.8 0 0 1 15.6 0"/></svg> Thông tin cá nhân</div>
-      ${row('Năm sinh',l.birth)}
-      ${row('SĐT / Zalo',l.phone)}
-      ${row('Facebook / TikTok',l.social)}
-      ${row('Quê quán',l.city)}
+      ${rowM('Năm sinh',l.birth)}
+      ${rowM('SĐT / Zalo',l.phone)}
+      ${rowM('Facebook / TikTok',l.social)}
+      ${rowM('Quê quán',l.city)}
       ${row('Khu vực',l.area)}
     </div>
 
     <div class="dp-section"><div class="dp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M4 5.2A2.2 2.2 0 0 1 6.2 3H12v17H6.2A2.2 2.2 0 0 0 4 22.2V5.2z"/><path d="M20 5.2A2.2 2.2 0 0 0 17.8 3H12v17h5.8A2.2 2.2 0 0 1 20 22.2V5.2z"/></svg> Học lực</div>
-      ${row('GPA 3 năm',l.gpa)}
-      ${row('Hạnh kiểm',l.conduct)}
-      ${row('Tiếng Hàn',l.korean)}
-      ${row('Passport',l.passport)}
+      ${rowM('GPA 3 năm',l.gpa)}
+      ${rowM('Hạnh kiểm',l.conduct)}
+      ${rowM('Tiếng Hàn',l.korean)}
+      ${rowM('Passport',l.passport)}
     </div>
 
     <div class="dp-section"><div class="dp-section-title">🇰🇷 Thông tin du học</div>
       ${row('Diện muốn đi',l.dien)}
       ${row('Trường / Ngành',l.school)}
       ${row('Dự kiến nhập học',l.intake)}
-      ${row('Tài chính',l.finance)}
-      ${row('Người thân ở Hàn',l.relative)}
-      ${row('Tình trạng hồ sơ',l.status)}
+      ${rowM('Tài chính',l.finance)}
+      ${rowM('Người thân ở Hàn',l.relative)}
+      ${rowM('Tình trạng hồ sơ',l.status)}
     </div>
 
     <div class="dp-section"><div class="dp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.28 0-2.49-.29-3.57-.8L3 21l1.9-5.24A8.5 8.5 0 1 1 21 11.5z"/></svg> Tư vấn</div>
-      ${row('Nhân viên',l.assignee)}
+      ${row('Nhân viên',aLabel(l))}
       ${row('Ngày thêm',fDate(l.createdAt))}
       ${row('Cập nhật',l.updatedAt?fDate(l.updatedAt):'')}
     </div>
 
-    ${l.note?`<div class="dp-section"><div class="dp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M6.2 3h8.2l3.6 3.6V21H6.2z"/><path d="M14.4 3v4.4h3.6M9 12.2h6M9 16h6"/></svg> Ghi chú</div><div class="dp-note">${l.note}</div></div>`:''}
+    ${l.note?`<div class="dp-section"><div class="dp-section-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M6.2 3h8.2l3.6 3.6V21H6.2z"/><path d="M14.4 3v4.4h3.6M9 12.2h6M9 16h6"/></svg> Ghi chú</div><div class="dp-note">${mask(l,l.note)}</div></div>`:''}
 
     <div style="display:flex;gap:9px;margin-top:8px;padding-bottom:20px;">
       <button class="btn btn-ghost" style="flex:1;" onclick="closeDetail();openModal('${l.id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.2px;flex-shrink:0;"><path d="M11.5 20.5H21"/><path d="M16.3 3.7a2.3 2.3 0 0 1 3.3 3.3L8.5 18.1l-4.3 1.1 1.1-4.3z"/></svg> Chỉnh sửa</button>
