@@ -615,6 +615,9 @@ textarea{resize:vertical;min-height:70px;}
 .ptr-spin{display:inline-block;animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 </style>
+<!-- SheetJS — đọc file Excel/CSV phía trình duyệt cho tính năng "Nhập từ Excel".
+     Để file trong repo (vendor/) thay vì tải qua CDN ngoài — tránh phụ thuộc mạng ngoài, load nhanh & ổn định hơn. -->
+<script src="vendor/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -802,7 +805,10 @@ textarea{resize:vertical;min-height:70px;}
 <div class="pg" id="pg-leads">
   <div class="ph">
     <div><div class="pt">Leads</div><div class="ps" id="leads-count-lbl">Toàn bộ danh sách</div></div>
-    <button class="add-btn" onclick="openModal()">+ Thêm lead</button>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" onclick="openImportModal()">📥 Nhập từ Excel</button>
+      <button class="add-btn" onclick="openModal()">+ Thêm lead</button>
+    </div>
   </div>
   <div class="toolbar">
     <div class="search-box"><span class="search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.2px;flex-shrink:0;"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></span><input type="text" placeholder="Tìm tên, số điện thoại..." id="q" oninput="renderLeads()"></div>
@@ -945,6 +951,18 @@ textarea{resize:vertical;min-height:70px;}
     </div>
   </div>
 
+  <!-- SECTION: Hồ sơ / học sinh đã nhập học (không bắt buộc) -->
+  <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--br);">📋 Hồ sơ (nếu đã nhập học — không bắt buộc)</div>
+  <div class="form-grid" style="margin-bottom:14px;">
+    <div class="ff"><label>Tên tiếng Hàn</label><input type="text" id="f-koreanname" placeholder="VD: 판티튀즈엉"></div>
+    <div class="ff"><label>Email</label><input type="text" id="f-email" placeholder="ten@email.com"></div>
+    <div class="ff"><label>Số hộ chiếu</label><input type="text" id="f-passport" placeholder="VD: C8670151"></div>
+    <div class="ff"><label>Số ARC (CMT tại Hàn)</label><input type="text" id="f-arc" placeholder="VD: 011104-8120048"></div>
+    <div class="ff"><label>Hạn visa</label><input type="text" id="f-visaexpiry" placeholder="VD: 2027.09.30"></div>
+    <div class="ff"><label>SĐT bố mẹ</label><input type="text" id="f-parentphone" placeholder="SĐT phụ huynh"></div>
+    <div class="ff s2"><label>Mã hồ sơ (trường cấp)</label><input type="text" id="f-appid" placeholder="VD: 26-2-1-3-014"></div>
+  </div>
+
   <!-- SECTION: Tư vấn -->
   <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--br);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.28 0-2.49-.29-3.57-.8L3 21l1.9-5.24A8.5 8.5 0 1 1 21 11.5z"/></svg> Tư vấn</div>
   <div class="form-grid" style="margin-bottom:14px;">
@@ -961,6 +979,74 @@ textarea{resize:vertical;min-height:70px;}
   <div class="md-footer">
     <button class="btn btn-ghost" onclick="closeModal()">Hủy</button>
     <button class="btn btn-primary" id="save-btn" onclick="saveLead()">Lưu lead</button>
+  </div>
+</div>
+</div>
+
+<!-- IMPORT EXCEL MODAL -->
+<div class="mo" id="import-modal" onclick="if(event.target===this)closeImportModal()">
+<div class="md" style="width:920px;max-width:95vw;">
+  <div class="md-hd">
+    <div class="md-title">📥 Nhập lead từ Excel</div>
+    <button class="md-close" onclick="closeImportModal()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2.1px;flex-shrink:0;"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <!-- STEP 1: upload -->
+  <div id="imp-step-upload">
+    <p style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.6;">Chọn file Excel (.xlsx/.xls) hoặc CSV chứa danh sách học sinh. Hệ thống tự nhận diện cột theo tên tiếng Việt — kể cả file song ngữ Hàn-Việt như file trường ĐH hay gửi. Bước sau anh/chị xem lại & sửa mapping nếu đoán sai, trước khi lưu thật vào CRM.</p>
+    <input type="file" id="imp-file-input" accept=".xlsx,.xls,.csv" onchange="handleImportFile(this)"/>
+    <div style="margin-top:14px;">
+      <button class="btn btn-ghost btn-sm" onclick="downloadImportTemplate()">⬇ Tải file mẫu chuẩn</button>
+    </div>
+    <div id="imp-upload-err" style="color:var(--red);font-size:13px;margin-top:10px;"></div>
+  </div>
+
+  <!-- STEP 2: mapping + filter + preview -->
+  <div id="imp-step-map" style="display:none;max-height:74vh;overflow:auto;">
+    <div id="imp-sheet-picker" style="margin-bottom:14px;font-size:13px;"></div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--br);">Lọc dòng theo cột (tuỳ chọn — VD file gộp nhiều NV thì lọc lấy đúng 1 người)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <select id="imp-filter-col" onchange="onImportFilterColChange()" style="min-width:240px;"></select>
+    </div>
+    <div id="imp-filter-values" style="margin-bottom:18px;"></div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--br);">Khớp cột file → field CRM</div>
+    <div id="imp-mapping-grid" class="form-grid" style="margin-bottom:18px;"></div>
+
+    <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--br);">Áp dụng cho tất cả dòng được nhập</div>
+    <div class="form-grid" style="margin-bottom:18px;">
+      <div class="ff"><label>NV tư vấn</label><select id="imp-assignee"></select></div>
+      <div class="ff"><label>Giai đoạn</label><select id="imp-stage"></select></div>
+      <div class="ff"><label>Mức độ tiềm năng</label><select id="imp-potential"><option value="1">⚪ Thấp</option><option value="2">🟡 Trung bình</option><option value="3" selected>🟢 Tiềm năng</option></select></div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;">Xem trước — <span id="imp-preview-count">0</span> dòng, đã tick <span id="imp-checked-count">0</span></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost btn-sm" onclick="impToggleAll(true)">Tick hết</button>
+        <button class="btn btn-ghost btn-sm" onclick="impToggleAll(false)">Bỏ tick hết</button>
+      </div>
+    </div>
+    <div class="warn-banner" style="margin-bottom:10px;">⚠️ Dòng tô cam là nghi trùng (tên/SĐT đã có trong CRM, hoặc trùng trong chính file này) — mặc định KHÔNG tick, anh/chị tự xem rồi tick lại nếu chắc chắn là người khác.</div>
+    <div class="tbl-wrap" style="max-height:320px;overflow:auto;border:1px solid var(--br);border-radius:8px;">
+      <table><thead><tr>
+        <th style="width:30px;"></th><th>Họ tên</th><th>SĐT</th><th>Năm sinh</th><th>Trường / Visa</th><th>Ghi chú trùng</th>
+      </tr></thead><tbody id="imp-preview-tbl"></tbody></table>
+    </div>
+
+    <div class="md-footer">
+      <button class="btn btn-ghost" onclick="closeImportModal()">Hủy</button>
+      <button class="btn btn-primary" id="imp-confirm-btn" onclick="confirmImport()">Nhập ngay</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: progress/result -->
+  <div id="imp-step-result" style="display:none;">
+    <div id="imp-result-body" style="font-size:14px;color:var(--tx);padding:24px 4px;text-align:center;line-height:1.8;"></div>
+    <div class="md-footer">
+      <button class="btn btn-primary" onclick="closeImportModal()">Đóng</button>
+    </div>
   </div>
 </div>
 </div>
@@ -1102,15 +1188,29 @@ const APPS_SCRIPT=`function doGet(e){
 
     if(action==='add'){
       var l=JSON.parse(decodeURIComponent(e.parameter.data));
-      sh.appendRow([l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'',l.branch||'']);
+      sh.appendRow(leadToRow_(l));
       return out({ok:true,action:'add'});
+    }
+    if(action==='bulkadd'){
+      // Nhập nhiều lead 1 lần (dùng cho tính năng "Nhập từ Excel") — ghi bằng 1 lệnh setValues thay vì
+      // gọi appendRow nhiều lần, vừa nhanh hơn vừa tránh chạm giới hạn thực thi của Apps Script.
+      var arr=JSON.parse(decodeURIComponent(e.parameter.data));
+      if(!arr || !arr.length) return out({ok:true,action:'bulkadd',count:0});
+      var startRow=sh.getLastRow()+1;
+      var rows=arr.map(leadToRow_);
+      sh.getRange(startRow,1,rows.length,LEAD_FIELDS_.length).setValues(rows);
+      try{
+        PropertiesService.getScriptProperties().setProperty('SUPPRESS_ONNEWLEAD_NOTIFY','1');
+        notifyBulkImport_(arr);
+      }catch(e2){ Logger.log('notify bulk err: '+e2.message); }
+      return out({ok:true,action:'bulkadd',count:rows.length});
     }
     if(action==='update'){
       var l=JSON.parse(decodeURIComponent(e.parameter.data));
       var rows=sh.getDataRange().getValues();
       for(var i=1;i<rows.length;i++){
         if(rows[i][0]===l.id){
-          sh.getRange(i+1,1,1,16).setValues([[l.id,l.name,l.birth||'',l.phone||'',l.city||'',l.source,l.dien||'',l.status||'',l.area||'',l.potential||1,l.stage||0,l.assignee||'',l.note||'',l.createdAt,l.updatedAt||'',l.branch||'']]);
+          sh.getRange(i+1,1,1,LEAD_FIELDS_.length).setValues([leadToRow_(l)]);
           return out({ok:true,action:'update'});
         }
       }
@@ -1127,7 +1227,7 @@ const APPS_SCRIPT=`function doGet(e){
     var leads=[];
     for(var i=1;i<rows.length;i++){
       if(!rows[i][0])continue;
-      leads.push({id:String(rows[i][0]),name:rows[i][1],birth:String(rows[i][2]||''),phone:String(rows[i][3]||''),city:String(rows[i][4]||''),source:rows[i][5],dien:String(rows[i][6]||''),status:String(rows[i][7]||''),area:String(rows[i][8]||''),potential:parseInt(rows[i][9])||1,stage:parseInt(rows[i][10])||0,assignee:String(rows[i][11]||''),note:String(rows[i][12]||''),createdAt:String(rows[i][13]||''),updatedAt:String(rows[i][14]||''),branch:String(rows[i][15]||'')});
+      leads.push(rowToLead_(rows[i]));
     }
     return out({ok:true,leads:leads});
   }catch(err){
@@ -1138,20 +1238,69 @@ function out(data){
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// ══ BẢO MẬT — thiết bị: chỉ ai gửi đúng SECRET_TOKEN (đặt ở Project Settings → Script Properties) mới đọc/ghi được ══
+// ══ DANH SÁCH CỘT — thứ tự CỐ ĐỊNH ══
+// 1–16 giữ nguyên như bản gốc (không đổi thứ tự / không chèn giữa) để không xáo trộn 167 dòng cũ đã có.
+// 17–23: field bị thiếu chỗ lưu trước đây (form đã có ô nhập nhưng Code.gs cũ chưa lưu — nay lưu đủ).
+// 24–30: field mới, phục vụ theo dõi học sinh ĐÃ nhập học (hộ chiếu/ARC/hạn visa/SĐT bố mẹ...).
+// Muốn thêm field mới nữa thì NỐI THÊM vào cuối mảng này, không chèn giữa.
+var LEAD_FIELDS_ = [
+  'id','name','birth','phone','city','source','dien','status','area','potential','stage','assignee','note','createdAt','updatedAt','branch',
+  'social','gpa','korean','school','intake','finance','relative',
+  'email','passport','arcNumber','visaExpiry','parentPhone','koreanName','applicationId'
+];
+function leadToRow_(l){
+  return LEAD_FIELDS_.map(function(k){
+    if(k==='potential') return l.potential||1;
+    if(k==='stage') return l.stage||0;
+    return (l[k]===undefined||l[k]===null) ? '' : l[k];
+  });
+}
+function rowToLead_(row){
+  var o={};
+  LEAD_FIELDS_.forEach(function(k,i){
+    var v=row[i];
+    if(k==='potential') o[k]=parseInt(v)||1;
+    else if(k==='stage') o[k]=parseInt(v)||0;
+    else o[k]=String(v===undefined||v===null?'':v);
+  });
+  return o;
+}
+
+// ══ BẢO MẬT — thiết bị ══
+// Chỉ ai gửi đúng SECRET_TOKEN mới đọc/ghi được. Đặt giá trị ở:
+// ⚙️ Project Settings (bên trái) → Script Properties → Add script property
+// Property: SECRET_TOKEN · Value: mã bạn tự chọn (gợi ý: o1Fq123CBe6ksWGg6O6xwZbb-9xNjtND)
 function checkAuth_(token){
   var real=PropertiesService.getScriptProperties().getProperty('SECRET_TOKEN');
   return !!real && token===real;
 }
 
 // ══ ĐĂNG NHẬP THEO TỪNG NHÂN VIÊN — sheet "Users" tự tạo & tự điền lần đầu chạy ══
-// Username = tên gọi + mã chi nhánh (VD hq/hn/dn). Password mặc định: 1234 — đổi trong web sau khi đăng nhập lần đầu.
-// Thêm nhân viên mới thì thêm dòng vào STAFF_SEED_ rồi chạy lại 1 action bất kỳ — người mới tự được thêm vào
-// sheet Users, người cũ (kể cả đã đổi pass) không bị ghi đè.
+// Username = tên gọi + mã chi nhánh (hq=Hàn Quốc, hn=Hà Nội, dn=Đồng Nai). Password mặc định: 1234
+// Đổi danh sách nhân viên (thêm người mới) thì sửa STAFF_SEED_ rồi chạy lại 1 action bất kỳ — người mới tự
+// được thêm vào sheet Users, người cũ (kể cả đã đổi pass) không bị ghi đè.
 var STAFF_SEED_ = [
-  // [username, matchName (khớp cột "NV tư vấn" trong Leads + hiển thị), tên đầy đủ, mã chi nhánh]
-  ['tenchinhanh','Tên','Tên đầy đủ','vp1'],
-  // ...thêm từng nhân viên thật của bạn vào đây (xem sheet Users sau khi chạy lần đầu để đối chiếu)...
+  // [username, matchName (dùng để khớp cột "NV tư vấn" trong Leads + hiển thị), tên đầy đủ, chi nhánh]
+  ['diemhq','Diễm','Diễm','hq'],
+  ['lananhhq','Lan Anh','Lan Anh','hq'],
+  ['anhhq','Ánh','Ánh','hq'],
+  ['anhq','An','An','hq'],
+  ['hoanhq','Hoàn','Hoàn','hq'],
+  ['tamhq','Sếp Tâm','Sếp Tâm','hq'],
+  ['hieuhq','Hiếu','Hiếu','hq'],
+  ['khaihq','Khải','Khải','hq'],
+  ['hienhn','Hiền','Lê Thu Hiền','hn'],
+  ['huonghn','Hương','Nguyễn Thị Hương','hn'],
+  ['thuhn','Thu','Nguyễn Thị Thu','hn'],
+  ['chuyenhn','Chuyền','Lang Thị Chuyền','hn'],
+  ['hoahn','Hòa','Vũ Thị Hòa','hn'],
+  ['huongtrahn','Hương Trà','Lê Hương Trà','hn'],
+  ['xuyendn','Xuyên','Đặng Thanh Xuyên','dn'],
+  ['totrinhdn','Tố Trinh','Nguyễn Thị Tố Trinh','dn'],
+  ['linhdandn','Linh Đan','Phạm Thị Linh Đan','dn'],
+  ['tridn','Trí','Bùi Minh Trí','dn'],
+  ['hieudn','Hiếu','Hồ Ngọc Hiếu','dn'],
+  ['kimnguyendn','Kim Nguyên','Huỳnh Thị Kim Nguyên','dn']
 ];
 var DEFAULT_PASSWORD_ = '1234';
 
@@ -1216,9 +1365,9 @@ function handleChangePass_(e){
   return out({ok:false, error:'user_not_found'});
 }
 
-// ===== TELEGRAM NOTIFY khi có lead mới (tuỳ chọn) =====
-const TELEGRAM_TOKEN = 'DÁN_TOKEN_BOT_TELEGRAM_CỦA_BẠN';
-const TELEGRAM_CHAT_ID = 'DÁN_CHAT_ID_GROUP_CỦA_BẠN';
+// ===== TELEGRAM NOTIFY (giữ nguyên như bản cũ) =====
+const TELEGRAM_TOKEN = '8480887065:AAGnbictvVmBxc9GcSwvVFXNNHoatpGw9OA';
+const TELEGRAM_CHAT_ID = '-5161203140';
 
 function sendTelegramNotify(text) {
   UrlFetchApp.fetch('https://api.telegram.org/bot' + TELEGRAM_TOKEN + '/sendMessage', {
@@ -1230,6 +1379,13 @@ function sendTelegramNotify(text) {
 
 function onNewLead(e) {
   try {
+    var props = PropertiesService.getScriptProperties();
+    if (props.getProperty('SUPPRESS_ONNEWLEAD_NOTIFY') === '1') {
+      // Vừa nhập hàng loạt qua bulkadd — đã gửi 1 thông báo tổng hợp riêng rồi, bỏ qua thông báo lẻ này
+      // để khỏi vừa spam vừa chỉ báo đúng 1 dòng cuối cùng.
+      props.deleteProperty('SUPPRESS_ONNEWLEAD_NOTIFY');
+      return;
+    }
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Leads');
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) return;
@@ -1248,14 +1404,30 @@ function onNewLead(e) {
   } catch(err) { Logger.log(err.message); }
 }
 
+function notifyBulkImport_(arr){
+  if(!arr || !arr.length) return;
+  var byAssignee={};
+  arr.forEach(function(l){
+    var k=l.assignee||'(chưa phân)';
+    byAssignee[k]=(byAssignee[k]||0)+1;
+  });
+  var lines=Object.keys(byAssignee).map(function(k){return '• '+k+': '+byAssignee[k]+' học sinh';});
+  var msg='📥 <b>NHẬP HÀNG LOẠT TỪ EXCEL — YTK GLOBAL CRM</b>\\n\\n'
+    + 'Vừa nhập <b>'+arr.length+'</b> lead mới:\\n'
+    + lines.join('\\n');
+  sendTelegramNotify(msg);
+  sendSignalNotify(msg.replace(/<\\/?b>/g, ''));
+}
+
 // ===== SIGNAL NOTIFY (tuỳ chọn — báo lead mới vào nhóm Signal) =====
+// Điền 3 giá trị dưới đây SAU KHI làm xong "huong-dan-signal-bot.md".
 // Để nguyên "DÁN_..." thì hàm này tự bỏ qua, không gây lỗi cho phần Telegram/Sheet.
 const SIGNAL_BOT_URL = 'DÁN_LINK_TAILSCALE_CỦA_BẠN';   // VD: https://ten-may.ten-tailnet.ts.net
-const SIGNAL_NUMBER  = 'DÁN_SỐ_ĐIỆN_THOẠI_BOT';         // VD: +84901234567
-const SIGNAL_GROUP_ID = 'DÁN_GROUP_ID';                  // dạng group.xxxxxxx
+const SIGNAL_NUMBER  = 'DÁN_SỐ_ĐIỆN_THOẠI_BOT';         // VD: +84901234567 (số đã link/đăng ký ở Bước C)
+const SIGNAL_GROUP_ID = 'DÁN_GROUP_ID';                  // lấy ở Bước D, dạng group.xxxxxxx
 
 function sendSignalNotify(text) {
-  if (!SIGNAL_BOT_URL || SIGNAL_BOT_URL.indexOf('DÁN_') === 0) return;
+  if (!SIGNAL_BOT_URL || SIGNAL_BOT_URL.indexOf('DÁN_') === 0) return; // chưa setup xong thì bỏ qua
   try {
     UrlFetchApp.fetch(SIGNAL_BOT_URL + '/v2/send', {
       method: 'post',
@@ -1272,7 +1444,8 @@ function installTrigger() {
   });
   ScriptApp.newTrigger('onNewLead').forSpreadsheet(SpreadsheetApp.getActive()).onChange().create();
   Logger.log('Trigger đã cài!');
-}`;
+}
+`;
 
 // ══ HÀM PHỤ TRỢ: ĐĂNG NHẬP / PHÂN QUYỀN XEM ══
 // Value dropdown NV = "Tên|chi_nhánh" (VD "Hiếu|dn") — để phân biệt trùng tên giữa các VP.
@@ -1350,6 +1523,291 @@ function checkDupLive(){
     const why=d.reason==='name+phone'?'trùng tên & SĐT':(d.reason==='phone'?'trùng SĐT':'trùng tên');
     return '• <b>'+l.name+'</b> — '+aLabel(l)+(l.createdAt?' · thêm '+fDate(l.createdAt):'')+' <span style="opacity:.7;">('+why+')</span>';
   }).join('<br>');
+}
+
+// ══ NHẬP LEAD TỪ EXCEL ══
+function escHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// field CRM có thể khớp tự động từ cột file — cố tình KHÔNG gồm assignee/branch/stage/potential
+// (mấy field đó áp dụng chung cho cả lô ở dưới, đáng tin hơn là đoán từ tên cột tự do).
+const IMP_FIELD_DEFS=[
+  {key:'name',label:'Họ và tên',required:true,kw:['ho ten','ten hoc sinh','ten khach','ten hs','full name','hoc vien','성명','이름']},
+  {key:'birth',label:'Năm sinh',kw:['nam sinh','ngay sinh','birth','dob','생년월일']},
+  {key:'phone',label:'SĐT / Zalo',kw:['dien thoai','so dt','sdt','phone','lien lac','연락처','전화']},
+  {key:'email',label:'Email',kw:['email','이메일']},
+  {key:'social',label:'Facebook / TikTok',kw:['facebook','link fb','tiktok','페이스북']},
+  {key:'city',label:'Quê quán / Tỉnh TP',kw:['thanh pho','tinh','dia chi','noi o','noi sinh','거주지','출생지']},
+  {key:'dien',label:'Diện / Visa',kw:['dien','visa','loai visa','비자']},
+  {key:'area',label:'Khu vực (VN/Hàn)',kw:['khu vuc','trong nuoc','ngoai nuoc','quoc noi','quoc ngoai','국내','국외']},
+  {key:'school',label:'Trường / Ngành',kw:['truong','nganh','university','대학교','학과']},
+  {key:'koreanName',label:'Tên tiếng Hàn',kw:['ten tieng han','korean name','한글이름']},
+  {key:'passport',label:'Số hộ chiếu',kw:['ho chieu','passport','여권']},
+  {key:'arcNumber',label:'Số ARC (CMT tại Hàn)',kw:['dang ky nguoi nuoc ngoai','so cmt','arc','외국인등록번호']},
+  {key:'visaExpiry',label:'Hạn visa',kw:['han visa','visa expiry','만료기한']},
+  {key:'parentPhone',label:'SĐT bố mẹ',kw:['bo me','phu huynh','parent','부모']},
+  {key:'applicationId',label:'Mã hồ sơ',kw:['ma ho so','application','수헌번호','수험번호']},
+  {key:'note',label:'Ghi chú',kw:['ghi chu','note','remark']}
+];
+const IMP_FILTER_SUGGEST_KW=['nguon','phu trach','gioi thieu','tu van vien','nhan vien'];
+
+let impWorkbook=null, impSheetName='', impHeaders=[], impRawRows=[];
+let impFieldMap={}, impFilterCol=-1, impFilterIncluded=null, impPreviewRows=[];
+
+function openImportModal(){
+  impWorkbook=null;impSheetName='';impHeaders=[];impRawRows=[];impFieldMap={};impFilterCol=-1;impFilterIncluded=null;impPreviewRows=[];
+  document.getElementById('imp-file-input').value='';
+  document.getElementById('imp-upload-err').textContent='';
+  document.getElementById('imp-step-upload').style.display='block';
+  document.getElementById('imp-step-map').style.display='none';
+  document.getElementById('imp-step-result').style.display='none';
+  document.getElementById('import-modal').classList.add('on');
+}
+function closeImportModal(){
+  document.getElementById('import-modal').classList.remove('on');
+}
+function downloadImportTemplate(){
+  const headers=['Họ và tên','Năm sinh','SĐT / Zalo','Email','Facebook/TikTok','Quê quán / Tỉnh TP','Diện visa','Khu vực (Từ Việt Nam / Trong Hàn Quốc)','Trường / Ngành','Ghi chú'];
+  const example=['Nguyễn Thị A','2006','0912345678','a@email.com','fb.com/nguyenthia','Hải Dương','D4-1','Từ Việt Nam','Đại học Silla - Kinh doanh','Quan tâm ngành kinh doanh'];
+  const csv='﻿'+[headers,example].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download='mau-nhap-lead-ytk.csv';document.body.appendChild(a);a.click();a.remove();
+  URL.revokeObjectURL(url);
+}
+async function handleImportFile(input){
+  const errEl=document.getElementById('imp-upload-err');
+  errEl.textContent='';
+  const file=input.files && input.files[0];
+  if(!file) return;
+  if(typeof XLSX==='undefined'){
+    errEl.textContent='Chưa tải được thư viện đọc Excel — kiểm tra lại kết nối mạng rồi thử lại.';
+    return;
+  }
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    if(!wb.SheetNames.length) throw new Error('File không có sheet nào');
+    impWorkbook=wb;
+    renderSheetPicker();
+    loadImportSheet(wb.SheetNames[0]);
+    document.getElementById('imp-step-upload').style.display='none';
+    document.getElementById('imp-step-map').style.display='block';
+  }catch(e){
+    errEl.textContent='Không đọc được file — kiểm tra lại định dạng (.xlsx/.xls/.csv). Lỗi: '+e.message;
+  }
+}
+function renderSheetPicker(){
+  const el=document.getElementById('imp-sheet-picker');
+  if(!impWorkbook || impWorkbook.SheetNames.length<2){ el.innerHTML=''; return; }
+  el.innerHTML='<label style="font-weight:600;color:var(--tx2);margin-right:8px;">Sheet:</label><select onchange="loadImportSheet(this.value)">'
+    + impWorkbook.SheetNames.map(n=>`<option value="${escHtml(n)}" ${n===impSheetName?'selected':''}>${escHtml(n)}</option>`).join('')
+    + '</select>';
+}
+function normImpHeader(s){ return normalizeName(s); }
+function guessColumnForField(keywords){
+  for(let i=0;i<impHeaders.length;i++){
+    const h=normImpHeader(impHeaders[i]);
+    if(h && keywords.some(k=>h.includes(normImpHeader(k)))) return i;
+  }
+  return -1;
+}
+function loadImportSheet(sheetName){
+  impSheetName=sheetName;
+  const ws=impWorkbook.Sheets[sheetName];
+  const rowsAoA=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+  impHeaders=(rowsAoA[0]||[]).map(h=>String(h==null?'':h).trim());
+  impRawRows=rowsAoA.slice(1).filter(r=>r.some(c=>String(c==null?'':c).trim()!==''));
+  impFieldMap={};
+  IMP_FIELD_DEFS.forEach(f=>{ impFieldMap[f.key]=guessColumnForField(f.kw); });
+  impFilterCol=guessColumnForField(IMP_FILTER_SUGGEST_KW);
+  impFilterIncluded=null;
+  renderImportMappingUI();
+}
+function mapAreaValue(raw){
+  const n=normImpHeader(raw);
+  if(!n) return '';
+  // Lưu ý: normImpHeader() chạy NFD (tách dấu) nên phải normalize CẢ chuỗi so sánh mẫu — không được
+  // so sánh trực tiếp với ký tự Hàn viết sẵn trong code, vì sau NFD nó không còn khớp bằng includes().
+  if(n.includes(normImpHeader('국내'))||n.includes('trong han')||n.includes('trong nuoc han')) return 'Trong Hàn Quốc';
+  if(n.includes(normImpHeader('국외'))||n.includes('ngoai nuoc')||n.includes('tu viet nam')||n.includes('nuoc ngoai')) return 'Từ Việt Nam';
+  return String(raw||'').trim();
+}
+function renderImportMappingUI(){
+  // ── filter column picker ──
+  const filterSel=document.getElementById('imp-filter-col');
+  filterSel.innerHTML='<option value="-1">— Không lọc, lấy hết —</option>'
+    + impHeaders.map((h,i)=>`<option value="${i}" ${i===impFilterCol?'selected':''}>${escHtml(h||'(cột '+(i+1)+')')}</option>`).join('');
+  renderImportFilterValues();
+
+  // ── field mapping dropdowns ──
+  const grid=document.getElementById('imp-mapping-grid');
+  grid.innerHTML=IMP_FIELD_DEFS.map(f=>{
+    const opts='<option value="-1">— Không dùng —</option>'+impHeaders.map((h,i)=>`<option value="${i}" ${i===impFieldMap[f.key]?'selected':''}>${escHtml(h||'(cột '+(i+1)+')')}</option>`).join('');
+    return `<div class="ff"><label>${escHtml(f.label)}${f.required?' *':''}</label><select onchange="onImportFieldMapChange('${f.key}',this.value)">${opts}</select></div>`;
+  }).join('');
+
+  // ── assignee / stage dropdowns (dùng đúng roster + logic stage như form thêm lead) ──
+  const assSel=document.getElementById('imp-assignee');
+  assSel.innerHTML='<option value="">— Chưa phân —</option>'+Object.keys(BRANCH_LBL).map(br=>{
+    const opts=STAFF_ROSTER.filter(s=>s.branch===br).map(s=>`<option value="${s.n}|${s.branch}">${escHtml(s.n)}</option>`).join('');
+    return opts?`<optgroup label="${BRANCH_LBL[br]}">${opts}</optgroup>`:'';
+  }).join('');
+  if(currentUser) assSel.value=currentUser.matchName+'|'+currentUser.branch;
+  const stgSel=document.getElementById('imp-stage');
+  stgSel.innerHTML=STAGES_VN.map((s,i)=>`<option value="${i}">${escHtml(s)}</option>`).join('');
+  stgSel.onchange=computeImportPreview;
+  assSel.onchange=computeImportPreview;
+  document.getElementById('imp-potential').onchange=computeImportPreview;
+
+  computeImportPreview();
+}
+function onImportFilterColChange(){
+  impFilterCol=parseInt(document.getElementById('imp-filter-col').value);
+  impFilterIncluded=null;
+  renderImportFilterValues();
+  computeImportPreview();
+}
+function onImportFieldMapChange(key,val){
+  impFieldMap[key]=parseInt(val);
+  computeImportPreview();
+}
+function renderImportFilterValues(){
+  const el=document.getElementById('imp-filter-values');
+  if(impFilterCol<0){ el.innerHTML=''; return; }
+  // gộp theo giá trị đã chuẩn hoá (bỏ khoảng trắng thừa/hoa-thường) để "DIEM BUI" và "DIEM BUI " gộp làm 1 lựa chọn
+  const groups={};
+  impRawRows.forEach(r=>{
+    const raw=String(r[impFilterCol]==null?'':r[impFilterCol]).trim();
+    if(!raw) return;
+    const key=normImpHeader(raw);
+    if(!groups[key]) groups[key]={label:raw,count:0};
+    groups[key].count++;
+  });
+  const keys=Object.keys(groups).sort((a,b)=>groups[b].count-groups[a].count);
+  if(impFilterIncluded===null){ impFilterIncluded=new Set(keys); } // mặc định tick hết, user tự bỏ bớt
+  el.innerHTML=keys.map(k=>{
+    const g=groups[k];
+    const checked=impFilterIncluded.has(k)?'checked':'';
+    return `<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 8px 0;font-size:13px;font-weight:500;color:var(--tx);cursor:pointer;">
+      <input type="checkbox" value="${escHtml(k)}" ${checked} onchange="onImportFilterValueToggle(this)" style="width:auto;">
+      ${escHtml(g.label)} <span style="color:var(--tx3);">(${g.count})</span>
+    </label>`;
+  }).join('') || '<div style="font-size:13px;color:var(--tx3);">Cột này không có giá trị nào.</div>';
+}
+function onImportFilterValueToggle(cb){
+  if(cb.checked) impFilterIncluded.add(cb.value); else impFilterIncluded.delete(cb.value);
+  computeImportPreview();
+}
+function impToggleAll(state){
+  impPreviewRows.forEach(r=>r.checked=state);
+  renderImportPreviewTable();
+}
+function computeImportPreview(){
+  const assignVal=(document.getElementById('imp-assignee').value||'').split('|');
+  const assignee=assignVal[0]||'', branch=assignVal[1]||(currentUser?currentUser.branch:'');
+  const stage=parseInt(document.getElementById('imp-stage').value)||0;
+  const potential=parseInt(document.getElementById('imp-potential').value)||3;
+
+  let rows=impRawRows;
+  if(impFilterCol>=0 && impFilterIncluded){
+    rows=rows.filter(r=>impFilterIncluded.has(normImpHeader(String(r[impFilterCol]==null?'':r[impFilterCol]).trim())));
+  }
+
+  const built=[];
+  rows.forEach(r=>{
+    const g=key=>{ const idx=impFieldMap[key]; return idx>=0 ? String(r[idx]==null?'':r[idx]).trim() : ''; };
+    const name=g('name');
+    if(!name) return; // bỏ dòng không có tên — chắc chắn không phải data thật
+    const lead={
+      name, birth:g('birth'), phone:g('phone'), email:g('email'), social:g('social'),
+      city:g('city'), dien:g('dien'), area:mapAreaValue(g('area')), school:g('school'),
+      koreanName:g('koreanName'), passport:g('passport'), arcNumber:g('arcNumber'),
+      visaExpiry:g('visaExpiry'), parentPhone:g('parentPhone'), applicationId:g('applicationId'),
+      note:g('note'), source:'Khác', potential, stage, assignee, branch,
+      gpa:'',korean:'',intake:'',finance:'',relative:''
+    };
+    built.push(lead);
+  });
+
+  // dò trùng: vừa với 167 lead có sẵn, vừa trùng ngay trong chính lô đang nhập
+  impPreviewRows=built.map((lead,idx)=>{
+    const existingDups=findDuplicateLeads(lead.name,lead.phone,null);
+    const batchDups=[];
+    for(let j=0;j<idx;j++){
+      const other=built[j];
+      const n1=normalizeName(lead.name), n2=normalizeName(other.name);
+      const p1=normalizePhone(lead.phone), p2=normalizePhone(other.phone);
+      if((n1&&n1===n2) || (p1.length>=8&&p1===p2)) batchDups.push(other);
+    }
+    const isDup=existingDups.length>0 || batchDups.length>0;
+    return {lead, existingDups, batchDups, checked:!isDup};
+  });
+  renderImportPreviewTable();
+}
+function renderImportPreviewTable(){
+  const tbl=document.getElementById('imp-preview-tbl');
+  document.getElementById('imp-preview-count').textContent=impPreviewRows.length;
+  document.getElementById('imp-checked-count').textContent=impPreviewRows.filter(r=>r.checked).length;
+  if(!impPreviewRows.length){
+    tbl.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:18px;">Không có dòng nào khớp (kiểm tra lại cột "Họ và tên" đã map đúng chưa, hoặc bộ lọc đang chọn).</td></tr>';
+    return;
+  }
+  tbl.innerHTML=impPreviewRows.map((r,i)=>{
+    const dupNote=[];
+    r.existingDups.forEach(d=>dupNote.push('⚠ Trùng CRM: '+escHtml(d.lead.name)+' ('+escHtml(d.lead.assignee||'chưa phân')+')'));
+    r.batchDups.forEach(d=>dupNote.push('⚠ Trùng trong file: '+escHtml(d.name)));
+    return `<tr style="${dupNote.length?'background:rgba(255,152,0,.08);':''}">
+      <td><input type="checkbox" ${r.checked?'checked':''} onchange="impPreviewRows[${i}].checked=this.checked;renderImportPreviewCounts();" style="width:auto;"></td>
+      <td>${escHtml(r.lead.name)}</td>
+      <td>${escHtml(r.lead.phone)}</td>
+      <td>${escHtml(r.lead.birth)}</td>
+      <td>${escHtml(r.lead.school||r.lead.dien)}</td>
+      <td style="font-size:12px;color:#e65100;">${dupNote.join('<br>')||'—'}</td>
+    </tr>`;
+  }).join('');
+}
+function renderImportPreviewCounts(){
+  document.getElementById('imp-checked-count').textContent=impPreviewRows.filter(r=>r.checked).length;
+}
+function chunkLeadsForImport(arr){
+  const chunks=[];
+  let cur=[], curLen=250;
+  arr.forEach(l=>{
+    const enc=encodeURIComponent(JSON.stringify(l)).length;
+    if(cur.length && curLen+enc>6000){ chunks.push(cur); cur=[]; curLen=250; }
+    cur.push(l); curLen+=enc+3;
+  });
+  if(cur.length) chunks.push(cur);
+  return chunks;
+}
+async function confirmImport(){
+  const toSend=impPreviewRows.filter(r=>r.checked).map(r=>r.lead);
+  if(!toSend.length){ toast('Chưa tick dòng nào để nhập','#e65100'); return; }
+  const btn=document.getElementById('imp-confirm-btn');
+  btn.disabled=true;
+  const chunks=chunkLeadsForImport(toSend);
+  let okCount=0, failChunks=0;
+  for(let i=0;i<chunks.length;i++){
+    btn.textContent=`Đang nhập... (${i+1}/${chunks.length})`;
+    try{
+      const url=gsUrl+'?action=bulkadd&t='+Date.now()+'&token='+encodeURIComponent(gsToken)+'&data='+encodeURIComponent(JSON.stringify(chunks[i]));
+      const r=await fetch(url,{mode:'cors'});
+      const d=await r.json();
+      if(d && d.ok) okCount+=chunks[i].length; else failChunks++;
+    }catch(e){ failChunks++; }
+  }
+  btn.disabled=false; btn.textContent='Nhập ngay';
+  document.getElementById('imp-step-map').style.display='none';
+  document.getElementById('imp-step-result').style.display='block';
+  const resBody=document.getElementById('imp-result-body');
+  if(okCount>0){
+    resBody.innerHTML=`✅ Đã nhập <b>${okCount}</b>/${toSend.length} lead thành công vào CRM.`+(failChunks?`<br><span style="color:#e65100;">⚠ ${failChunks} đợt gửi bị lỗi — thử nhập lại phần còn thiếu nếu cần.</span>`:'');
+    toast('✓ Đã nhập '+okCount+' lead từ Excel','#2e7d32');
+    await forceSync();
+  } else {
+    resBody.innerHTML='⚠ Nhập thất bại — kiểm tra lại kết nối rồi thử lại.';
+  }
 }
 
 function updateUserChip(){
@@ -1974,11 +2432,15 @@ function openModal(id=null){
       document.getElementById('f-rel-no').checked=!hasRel;
       document.getElementById('f-relative-wrap').style.display=hasRel?'block':'none';
       F('f-relative',hasRel?l.relative:'');
+      F('f-koreanname',l.koreanName||'');F('f-email',l.email||'');F('f-passport',l.passport||'');
+      F('f-arc',l.arcNumber||'');F('f-visaexpiry',l.visaExpiry||'');F('f-parentphone',l.parentPhone||'');
+      F('f-appid',l.applicationId||'');
       F('f-pot2',l.potential||3);F('f-staff2',(l.assignee||'')+(l.branch?'|'+l.branch:''));F('f-note',l.note||'');
       updateStageOpts();F('f-stg2',l.stage||0);
     }
   } else {
-    ['f-name','f-birth','f-phone','f-social','f-city','f-gpa','f-school','f-finance','f-relative','f-note'].forEach(i=>F(i));
+    ['f-name','f-birth','f-phone','f-social','f-city','f-gpa','f-school','f-finance','f-relative','f-note',
+     'f-koreanname','f-email','f-passport','f-arc','f-visaexpiry','f-parentphone','f-appid'].forEach(i=>F(i));
     F('f-src2','Facebook');F('f-korean','');F('f-dien','');F('f-area2','');F('f-intake','');
     F('f-pot2',3);F('f-staff2',currentUser?(currentUser.matchName+'|'+currentUser.branch):'');
     document.getElementById('f-rel-no').checked=true;
@@ -2024,6 +2486,9 @@ async function saveLead(){
     dien:gv('f-dien'),area:gv('f-area2'),
     school:gv('f-school'),intake:gv('f-intake'),
     finance:gv('f-finance'),relative:relativeVal,
+    koreanName:gv('f-koreanname'),email:gv('f-email'),passport:gv('f-passport'),
+    arcNumber:gv('f-arc'),visaExpiry:gv('f-visaexpiry'),parentPhone:gv('f-parentphone'),
+    applicationId:gv('f-appid'),
     potential:parseInt(gv('f-pot2'))||3,
     stage:parseInt(gv('f-stg2'))||0,
     assignee:staffParts[0]||'',
