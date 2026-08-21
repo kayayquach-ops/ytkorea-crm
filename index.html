@@ -1715,16 +1715,19 @@ function computeImportPreview(){
   }
 
   const built=[];
-  rows.forEach(r=>{
+  const impNowIso=new Date().toISOString();
+  rows.forEach((r,rowIdx)=>{
     const g=key=>{ const idx=impFieldMap[key]; return idx>=0 ? String(r[idx]==null?'':r[idx]).trim() : ''; };
     const name=g('name');
     if(!name) return; // bỏ dòng không có tên — chắc chắn không phải data thật
     const lead={
+      id:'ytk_'+Date.now()+'_'+rowIdx, // BẮT BUỘC phải có: thiếu id thì action=get sẽ lọc bỏ dòng này (coi như "trống"), lead ghi thành công vào Sheet nhưng biến mất khỏi CRM
       name, birth:g('birth'), phone:g('phone'), email:g('email'), social:g('social'),
       city:g('city'), dien:g('dien'), area:mapAreaValue(g('area')), school:g('school'),
       koreanName:g('koreanName'), passport:g('passport'), arcNumber:g('arcNumber'),
       visaExpiry:g('visaExpiry'), parentPhone:g('parentPhone'), applicationId:g('applicationId'),
       note:g('note'), source:'Khác', potential, stage, assignee, branch,
+      createdAt:impNowIso, updatedAt:impNowIso,
       gpa:'',korean:'',intake:'',finance:'',relative:''
     };
     built.push(lead);
