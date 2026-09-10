@@ -1120,8 +1120,14 @@ let leads=[];
 // URL Apps Script — để public được vì server đã tự chặn bằng SECRET_TOKEN (xem checkAuth_ trong APPS_SCRIPT bên dưới).
 // Có đúng URL mà sai/thiếu mã bảo mật thì server chỉ trả {ok:false,error:'unauthorized'}, không đọc được data thật.
 const DEFAULT_GS_URL='https://script.google.com/macros/s/AKfycbzT73Iy9H7sI5dke8kmBso4VL6V8pH7RAkgoBWs8uJJqwPPjsFzhzuQb1dDWrznaAVoiw/exec';
+// Theo yêu cầu: nhúng thẳng mã bảo mật vào code để AI VÀO LINK THƯỜNG CŨNG DÙNG ĐƯỢC NGAY, không cần
+// bước "bấm link #k=..." kết nối riêng nữa. Đánh đổi: mã này giờ công khai trong mã nguồn trang (trang
+// tĩnh trên GitHub Pages, ai cũng xem được "View source") — không còn rào chắn với người ngoài tình cờ
+// tìm ra link. Nếu sau này muốn phục hồi rào chắn đó thì xoá dòng DEFAULT_GS_TOKEN và đổi dòng gsToken
+// bên dưới về lại localStorage.getItem('ytk_gs4_token')||''.
+const DEFAULT_GS_TOKEN='o1Fq123CBe6ksWGg6O6xwZbb-9xNjtND';
 let gsUrl=localStorage.getItem('ytk_gs4')||DEFAULT_GS_URL;
-let gsToken=localStorage.getItem('ytk_gs4_token')||''; // mã bảo mật riêng của máy này — không nằm trong code public
+let gsToken=localStorage.getItem('ytk_gs4_token')||DEFAULT_GS_TOKEN;
 
 // ══ LINK TỰ ĐỘNG KẾT NỐI (magic link) ══
 // Admin bấm "Tạo link cho đồng nghiệp" ở trang Cài đặt → được link dạng .../#k=MÃ_BẢO_MẬT.
