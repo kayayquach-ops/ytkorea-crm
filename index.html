@@ -1372,7 +1372,7 @@ function handleChangePass_(e){
 }
 
 // ===== TELEGRAM NOTIFY (giữ nguyên như bản cũ) =====
-const TELEGRAM_TOKEN = '8480887065:AAGnbictvVmBxc9GcSwvVFXNNHoatpGw9OA';
+const TELEGRAM_TOKEN = PropertiesService.getScriptProperties().getProperty('TELEGRAM_TOKEN'); // đặt trong Project Settings > Script Properties, không ghi vào code
 const TELEGRAM_CHAT_ID = '-5161203140';
 
 function sendTelegramNotify(text) {
